@@ -7,19 +7,20 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0a0a0f;
-    --panel: #13131b;
-    --panel-2: #1a1a25;
-    --line: #26263a;
-    --text: #e9e6df;
-    --muted: #8a8798;
-    --gold: #e8a317;
-    --gold-soft: rgba(232,163,23,.14);
-    --red: #ff5c5c;
-    --green: #4cd97b;
+    --bg: #072a80;
+    --panel: #0a3193;
+    --panel-2: #0d38a6;
+    --line: #2a53b8;
+    --text: #f6f7ff;
+    --muted: #9fb0e8;
+    --gold: #f9d616;
+    --gold-soft: rgba(249,214,22,.16);
+    --blue-ink: #0a2a7d;
+    --red: #ff6b6b;
+    --green: #57e08a;
     --radius: 14px;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -34,8 +35,8 @@
     content: '';
     position: fixed; inset: 0;
     background:
-      radial-gradient(1200px 500px at 80% -10%, rgba(232,163,23,.07), transparent 60%),
-      radial-gradient(900px 500px at 0% 110%, rgba(90,80,200,.08), transparent 60%);
+      radial-gradient(1200px 500px at 80% -10%, rgba(249,214,22,.10), transparent 60%),
+      radial-gradient(900px 500px at 0% 110%, rgba(2,14,60,.55), transparent 65%);
     pointer-events: none;
   }
 
@@ -46,15 +47,37 @@
     gap: 14px; flex-wrap: wrap;
     max-width: 1200px; margin: 0 auto;
   }
-  .brand h1 {
-    font-family: 'Playfair Display', serif;
-    font-size: clamp(26px, 4.5vw, 40px);
-    letter-spacing: .5px;
+  .ticket {
+    position: relative; display: inline-block;
+    background: var(--gold);
+    padding: 10px 30px 12px;
+    border-radius: 8px;
+    transform: rotate(-2deg);
+    box-shadow: 0 8px 24px rgba(1,10,45,.45);
   }
-  .brand h1 em { color: var(--gold); font-style: normal; }
+  .ticket::before, .ticket::after {
+    content: ''; position: absolute; top: 50%; transform: translateY(-50%);
+    width: 20px; height: 20px; border-radius: 50%; background: var(--bg);
+  }
+  .ticket::before { left: -10px; }
+  .ticket::after { right: -10px; }
+  .ticket .punch {
+    position: absolute; inset: 5px; border: 2px dashed rgba(10,42,125,.35);
+    border-radius: 6px; pointer-events: none;
+  }
+  .brand h1 {
+    font-family: 'Anton', sans-serif;
+    font-size: clamp(24px, 4.5vw, 40px);
+    letter-spacing: 1.5px;
+    color: var(--blue-ink);
+    transform: skewX(-8deg);
+    text-transform: uppercase;
+    line-height: 1.05;
+  }
+  .brand h1 em { font-style: normal; }
   .brand .sub {
-    color: var(--muted); font-size: 13px; margin-top: 4px;
-    font-family: 'JetBrains Mono', monospace; letter-spacing: .5px;
+    color: var(--gold); font-size: 12.5px; margin-top: 12px; font-weight: 700;
+    font-family: 'JetBrains Mono', monospace; letter-spacing: 2px;
   }
   .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
@@ -67,7 +90,7 @@
   }
   button:hover { border-color: var(--gold); }
   button:active { transform: scale(.97); }
-  button.primary { background: var(--gold); border-color: var(--gold); color: #14100a; }
+  button.primary { background: var(--gold); border-color: var(--gold); color: var(--blue-ink); }
   button.primary:hover { filter: brightness(1.08); }
   button.danger:hover { border-color: var(--red); color: var(--red); }
   button.ghost { background: transparent; }
@@ -77,7 +100,7 @@
     border-radius: 10px; padding: 10px 12px; outline: none; width: 100%;
   }
   input:focus, select:focus, textarea:focus { border-color: var(--gold); }
-  ::placeholder { color: #5c5a6b; }
+  ::placeholder { color: #6d84c9; }
 
   /* ---------- Layout ---------- */
   .wrap {
@@ -118,7 +141,8 @@
   .list-header { padding: 18px 18px 0; }
   .list-title-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .list-title-row h2 {
-    font-family: 'Playfair Display', serif; font-size: 26px; display: flex; align-items: center; gap: 10px;
+    font-family: 'Anton', sans-serif; font-size: 25px; display: flex; align-items: center; gap: 10px;
+    text-transform: uppercase; letter-spacing: 1.5px; transform: skewX(-6deg); font-weight: 400;
   }
   .list-meta {
     font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: var(--muted);
@@ -152,10 +176,10 @@
   .items { list-style: none; }
   .item {
     display: flex; align-items: center; gap: 12px;
-    padding: 12px 18px; border-bottom: 1px solid rgba(38,38,58,.55);
+    padding: 12px 18px; border-bottom: 1px solid rgba(42,83,184,.45);
   }
   .item:last-child { border-bottom: 0; }
-  .item:hover { background: rgba(255,255,255,.02); }
+  .item:hover { background: rgba(255,255,255,.04); }
   .item .watch-toggle {
     width: 30px; height: 30px; border-radius: 50%; flex: none;
     display: grid; place-items: center; font-size: 14px; padding: 0;
@@ -168,7 +192,7 @@
   .item .t .yr { color: var(--muted); font-weight: 400; font-size: 13px; font-family: 'JetBrains Mono', monospace; margin-left: 7px; }
   .item .notes { color: var(--muted); font-size: 12.5px; margin-top: 3px; overflow-wrap: anywhere; }
   .item .stars { flex: none; color: var(--gold); font-size: 13px; letter-spacing: 1px; min-width: 84px; text-align: right; font-family: 'JetBrains Mono', monospace; }
-  .item .stars.empty { color: #3c3a4d; }
+  .item .stars.empty { color: #3b5cb5; }
   .row-actions { display: flex; gap: 4px; flex: none; }
   .row-actions button { padding: 6px 9px; font-size: 12px; background: transparent; border-color: transparent; color: var(--muted); }
   .row-actions button:hover { border-color: var(--line); color: var(--text); }
@@ -187,7 +211,10 @@
     background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
     width: 100%; max-width: 440px; padding: 22px; max-height: 90vh; overflow: auto;
   }
-  .modal h3 { font-family: 'Playfair Display', serif; font-size: 21px; margin-bottom: 16px; }
+  .modal h3 {
+    font-family: 'Anton', sans-serif; font-size: 20px; margin-bottom: 16px;
+    text-transform: uppercase; letter-spacing: 1.5px; transform: skewX(-6deg); font-weight: 400;
+  }
   .field { margin-bottom: 14px; }
   .field label {
     display: block; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
@@ -203,7 +230,7 @@
 
   /* star picker */
   .star-picker { display: flex; gap: 4px; align-items: center; }
-  .star-picker button { font-size: 20px; padding: 4px 6px; background: transparent; border-color: transparent; color: #3c3a4d; }
+  .star-picker button { font-size: 20px; padding: 4px 6px; background: transparent; border-color: transparent; color: #3b5cb5; }
   .star-picker button.full, .star-picker button.half { color: var(--gold); }
   .star-picker .hint { color: var(--muted); font-size: 12px; margin-left: 8px; font-family: 'JetBrains Mono', monospace; }
 
@@ -235,8 +262,8 @@
 
 <header>
   <div class="brand">
-    <h1>Nick's <em>Movie Vault</em></h1>
-    <div class="sub">LISTS &middot; ADD &middot; CURATE &middot; RANK LATER</div>
+    <div class="ticket"><span class="punch"></span><h1>Nick's Movie Vault</h1></div>
+    <div class="sub">BE KIND &middot; PLEASE REWIND &nbsp;&mdash;&nbsp; ADD &middot; CURATE &middot; RANK</div>
   </div>
   <div class="header-actions">
     <button id="exportBtn" title="Download all lists as a JSON backup">⬇ Export</button>
