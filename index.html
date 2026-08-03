@@ -159,6 +159,32 @@
     background: var(--panel-2);
   }
 
+  .add-row.has-bracket { grid-template-columns: 1fr 80px 100px auto; }
+  .add-row select { appearance: none; padding-right: 28px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239fb0e8' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center; }
+
+  /* ---------- Age bracket pills ---------- */
+  .bracket-pills { display: flex; gap: 6px; flex-wrap: wrap; padding: 12px 18px 0; }
+  .bracket-pills button {
+    padding: 6px 13px; font-size: 12.5px; border-radius: 20px;
+    color: var(--muted); background: transparent;
+    font-family: 'JetBrains Mono', monospace; font-weight: 600;
+  }
+  .bracket-pills button.on { background: var(--gold); border-color: var(--gold); color: var(--blue-ink); }
+  .bracket-chip {
+    display: inline-block; margin-left: 8px; vertical-align: 1px;
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 600;
+    color: var(--gold); border: 1px solid rgba(249,214,22,.5);
+    border-radius: 20px; padding: 1px 8px;
+  }
+  .bracket-head {
+    list-style: none; padding: 16px 18px 7px;
+    font-family: 'Anton', sans-serif; font-size: 15px; letter-spacing: 2.5px;
+    text-transform: uppercase; color: var(--gold); transform: skewX(-6deg);
+    border-bottom: 1px solid rgba(42,83,184,.45);
+  }
+
   /* ---------- Controls row ---------- */
   .controls {
     display: flex; gap: 8px; padding: 12px 18px; border-bottom: 1px solid var(--line);
@@ -251,7 +277,7 @@
     .list-nav { flex-direction: row; overflow-x: auto; padding-bottom: 6px; -webkit-overflow-scrolling: touch; }
     .list-btn { width: auto; flex: none; padding: 9px 12px; }
     .list-btn .name { max-width: 130px; }
-    .add-row { grid-template-columns: 1fr; }
+    .add-row, .add-row.has-bracket { grid-template-columns: 1fr; }
     .add-row input[type=number] { max-width: 120px; }
     .item .stars { min-width: 0; }
     .controls input[type=text] { max-width: none; flex: 1; }
@@ -327,6 +353,10 @@
       <label>My rating</label>
       <div class="star-picker" id="starPicker"></div>
     </div>
+    <div class="field" id="itemBracketField" style="display:none">
+      <label>Age bracket</label>
+      <select id="itemBracketInput"></select>
+    </div>
     <div class="field">
       <label>Notes</label>
       <textarea id="itemNotesInput" rows="2" maxlength="300" placeholder="Tier, who recommended it, where to stream…"></textarea>
@@ -350,31 +380,313 @@
 const STORE_KEY = 'vault_lists_v1';
 
 function seedItems(arr) {
-  // arr entries: [title, year|null, rating|null, notes|null, watched]
+  // arr entries: [title, year|null, rating|null, notes|null, watched, bracket|null]
   return arr.map(function (e, i) {
     return {
       id: 's' + i + '_' + Math.random().toString(36).slice(2, 8),
       title: e[0], year: e[1] || null, rating: e[2] || null,
-      notes: e[3] || '', watched: e[4] !== false, added: Date.now() - (arr.length - i)
+      notes: e[3] || '', watched: e[4] !== false, bracket: e[5] || null,
+      added: Date.now() - (arr.length - i)
     };
   });
 }
 
+const BRACKETS = ['4-8', '8-12', '12-16', '16-18', '18-24', '24-30'];
+const BYAGE_DATA = [
+          ["Spider-Man Into the Spiderverse", 2018, 4.5, "Bob Persichetti, Peter Ramsey, Rodney Rothman · 97% RT", true, "4-8"],
+          ["Ponyo", 2008, 3.0, "Hayao Miyazaki · 91% RT", true, "4-8"],
+          ["Kiki's Delivery Service", 1989, null, "Hayao Miyazaki · 98% RT", true, "4-8"],
+          ["Spirited Away", 2001, 5.0, "Hayao Miyazaki · 97% RT", true, "4-8"],
+          ["Howl's Moving Castle", 2004, 4.5, "Hayao Miyazaki · 87% RT", true, "4-8"],
+          ["My Neighbor Tototoro", 1988, 3.5, "Hayao Miyazaki · 94% RT", true, "4-8"],
+          ["Toy Story 1-4", null, 3.5, "", true, "4-8"],
+          ["Wall-e", 2008, 4.5, "Andrew Stanton · 96% RT", true, "4-8"],
+          ["Incredible's", 2004, 3.5, "Brad Bird · 97% RT", true, "4-8"],
+          ["Lego Movie", 2014, 3.5, "Phil Lord, Christopher Miller · 96% RT", true, "4-8"],
+          ["The Lion's King", 1994, 3.5, "Roger Allers, Rob Minkoff · 93% RT", true, "4-8"],
+          ["Monsters, Inc", 2001, 3.5, "Pete Docter · 96% RT", true, "4-8"],
+          ["Finding Nemo", 2003, 3.5, "Andrew Stanton · 99% RT", true, "4-8"],
+          ["Star Wars (Figure order out)", null, 3.0, "", true, "4-8"],
+          ["Rataouille", 2007, 4.0, "Brad Bird · 96% RT", true, "4-8"],
+          ["How to Train your Dragon", 2010, null, "Dean DeBlois, Chris Sanders · 99% RT", true, "4-8"],
+          ["Wreck It Ralph", 2012, null, "Rich Moore · 87% RT", true, "4-8"],
+          ["Big Hero 6", 2014, null, "Don Hall, Chris Williams · 90% RT", true, "4-8"],
+          ["Inside Out", 2015, 3.5, "Pete Docter · 98% RT", true, "4-8"],
+          ["Coco", 2017, 4.0, "Lee Unkrich, Adrian Molina · 97% RT", true, "4-8"],
+          ["Moana", 2016, 3.5, "Ron Clements, John Musker · 95% RT", true, "4-8"],
+          ["Zootopia", 2016, 3.5, "Byron Howard, Rich Moore · 98% RT", true, "4-8"],
+          ["Encanto", 2021, null, "Jared Bush, Byron Howard · 92% RT", true, "4-8"],
+          ["Elf", 2003, 4.0, "Jon Favreau · 84% RT", true, "4-8"],
+          ["The Emperors New Groove", 2000, 4.0, "Mark Dindal · 85% RT", true, "4-8"],
+          ["Hercules", 1997, null, "Ron Clements, John Musker · 83% RT", true, "4-8"],
+          ["Spider-Man Into the Spiderverse 2", 2023, 4.5, "Joaquim Dos Santos, Kemp Powers, Justin K. Thompson · 95% RT", true, "4-8"],
+          ["Borrowers", 1997, null, "Peter Hewitt · 33% RT", true, "4-8"],
+          ["Babe", 1995, null, "Chris Noonan · 97% RT", true, "4-8"],
+          ["Indian Jones Trilogy", null, 5.0, "", true, "8-12"],
+          ["Nightmare Before Christmas", 1993, null, "Henry Selick · 95% RT", true, "8-12"],
+          ["Lord of the Rings", null, 4.5, "", true, "8-12"],
+          ["UP", 2009, 4.0, "Pete Docter, Bob Peterson · 98% RT", true, "8-12"],
+          ["Turning Red", 2022, null, "Domee Shi · 95% RT", true, "8-12"],
+          ["Fantastic Mr. Fox", 2009, 4.0, "Wes Anderson · 93% RT", true, "8-12"],
+          ["The Sandlot", 1993, null, "David Mickey Evans · 57% RT", true, "8-12"],
+          ["Harry Potter", null, 3.0, "", true, "8-12"],
+          ["Iron Giant", 1999, null, "Brad Bird · 96% RT", true, "8-12"],
+          ["The Goonies", 1985, 4.0, "Richard Donner · 73% RT", true, "8-12"],
+          ["Hook", 1991, null, "Steven Spielberg · 29% RT", true, "8-12"],
+          ["The Princess Bride", 1987, 4.0, "Rob Reiner · 97% RT", true, "8-12"],
+          ["Willy Wonka, OG", 1971, null, "Mel Stuart · 92% RT", true, "8-12"],
+          ["Adventures in Babysitting", 1987, null, "Chris Columbus · 55% RT", true, "8-12"],
+          ["E.T.", 1982, 4.0, "Steven Spielberg · 99% RT", true, "8-12"],
+          ["Back to the Future", 1985, 4.0, "Robert Zemeckis · 93% RT", true, "8-12"],
+          ["Matilda", 1996, null, "Danny DeVito · 90% RT", true, "8-12"],
+          ["James and the Giant Peach", 1996, null, "Henry Selick · 91% RT", true, "8-12"],
+          ["Kubo", 2016, 4.0, "Travis Knight · 97% RT", true, "8-12"],
+          ["Pirates of the Caribbean", null, 4.0, "", true, "8-12"],
+          ["Marvel?", null, null, "", true, "8-12"],
+          ["MIB", null, null, "", true, "8-12"],
+          ["Jurassi Park", null, 5.0, "", true, "8-12"],
+          ["The Mummy", 1999, null, "Stephen Sommers · 59% RT", true, "8-12"],
+          ["Dark crystal", 1982, null, "Jim Henson, Frank Oz · 72% RT", true, "8-12"],
+          ["Godzilla", 1954, 3.5, "Ishirō Honda · 93% RT", true, "8-12"],
+          ["School of Rock", 2003, 3.5, "Richard Linklater · 92% RT", true, "8-12"],
+          ["A Knights Tale", 2001, null, "Brian Helgeland · 58% RT", true, "8-12"],
+          ["Dumb and Dumber", 1994, null, "Peter Farrelly, Bobby Farrelly · 66% RT", true, "8-12"],
+          ["Stand By Me", 1986, 4.0, "Rob Reiner · 91% RT", true, "8-12"],
+          ["Babe", 1995, null, "Chris Noonan · 97% RT", true, "8-12"],
+          ["Army of Darkness", 1992, null, "Sam Raimi · 72% RT", true, "8-12"],
+          ["Gremilins", 1984, 3.0, "Joe Dante · 85% RT", true, "8-12"],
+          ["Clue", 1985, null, "Jonathan Lynn · 68% RT", true, "8-12"],
+          ["Jaws", 1975, 4.0, "Steven Spielberg · 97% RT", true, "8-12"],
+          ["Monty Python and the Holy Grail", 1975, 4.0, "Terry Gilliam, Terry Jones · 97% RT", true, "8-12"],
+          ["Grease", 1978, null, "Randal Kleiser · 76% RT", true, "8-12"],
+          ["Young Frankenstein", 1974, null, "Mel Brooks · 94% RT", true, "8-12"],
+          ["Blazing Saddles", 1974, null, "Mel Brooks · 90% RT", true, "8-12"],
+          ["Space Balls", 1987, null, "Mel Brooks · 54% RT", true, "8-12"],
+          ["Sing Street", 2016, 4.0, "John Carney · 97% RT", true, "8-12"],
+          ["Stardust", 2007, 3.5, "Matthew Vaughn · 77% RT", true, "8-12"],
+          ["Suzume", 2022, 4.0, "Makoto Shinkai · 96% RT", true, "8-12"],
+          ["Ladyhawke", 1985, null, "Richard Donner · 65% RT", true, "8-12"],
+          ["Legend", 1985, 2.5, "Ridley Scott · 41% RT", true, "8-12"],
+          ["Never ending story", 1984, null, "Wolfgang Petersen · 80% RT", true, "8-12"],
+          ["Tremors", 1990, null, "Ron Underwood · 88% RT", true, "8-12"],
+          ["Overboard", 1987, null, "Garry Marshall · 56% RT", true, "8-12"],
+          ["Ace Ventura", 1994, null, "Tom Shadyac · 45% RT", true, "8-12"],
+          ["Your Name", 2016, 4.0, "Makoto Shinkai · 98% RT", true, "12-16"],
+          ["Ferris Bueller's Day Off", 1986, 4.0, "John Hughes · 81% RT", true, "12-16"],
+          ["Napoleon Dynamite", 2004, 3.5, "Jared Hess · 72% RT", true, "12-16"],
+          ["Time Bandit", 1981, 4.0, "Terry Gilliam · 90% RT", true, "12-16"],
+          ["Breakfast club", 1985, 3.5, "John Hughes · 89% RT", true, "12-16"],
+          ["Scott Pilgrim", 2010, 4.5, "Edgar Wright · 82% RT", true, "12-16"],
+          ["Shaun of the Dead", 2004, 5.0, "Edgar Wright · 92% RT", true, "12-16"],
+          ["Forrst Gump", 1994, 3.5, "Robert Zemeckis · 71% RT", true, "12-16"],
+          ["The Dark Knight", 2008, 5.0, "Christopher Nolan · 94% RT", true, "12-16"],
+          ["Mad Max Fury Road", 2015, 5.0, "George Miller · 97% RT", true, "12-16"],
+          ["Shawshank Redemption", 1994, 4.0, "Frank Darabont · 90% RT", true, "12-16"],
+          ["Mission Impossible 4-7", null, null, "", true, "12-16"],
+          ["Superbad", 2007, 4.5, "Greg Mottola · 87% RT", true, "12-16"],
+          ["Hot Fuzz", 2007, 4.0, "Edgar Wright · 91% RT", true, "12-16"],
+          ["Gladiator", 2000, 4.0, "Ridley Scott · 80% RT", true, "12-16"],
+          ["Titanic", 1997, null, "James Cameron · 88% RT", true, "12-16"],
+          ["10 things I hate about you", 1999, null, "Gil Junger · 62% RT", true, "12-16"],
+          ["Terminator 2", 1991, 4.5, "James Cameron · 91% RT", true, "12-16"],
+          ["Sixth Sense", 1999, 4.0, "M. Night Shyamalan · 86% RT", true, "12-16"],
+          ["Good Will Hunting", 1997, null, "Gus Van Sant · 97% RT", true, "12-16"],
+          ["Scream", 1996, 3.5, "Wes Craven · 79% RT", true, "12-16"],
+          ["Braveheart", 1995, null, "Mel Gibson · 76% RT", true, "12-16"],
+          ["Austin Powers", null, null, "", true, "12-16"],
+          ["Die Hard", 1988, 3.5, "John McTiernan · 94% RT", true, "12-16"],
+          ["The Conjuring", 2013, 4.0, "James Wan · 86% RT", true, "12-16"],
+          ["Paranormal Activity", 2007, null, "Oren Peli · 83% RT", true, "12-16"],
+          ["To Kill a Mockingbird", 1962, null, "Robert Mulligan · 93% RT", true, "12-16"],
+          ["Anchorman", 2004, 4.0, "Adam McKay · 66% RT", true, "12-16"],
+          ["Old School", 2003, null, "Todd Phillips · 60% RT", true, "12-16"],
+          ["Halloween (77)", 1978, 3.5, "John Carpenter · 96% RT", true, "12-16"],
+          ["Best in Show", 2000, null, "Christopher Guest · 93% RT", true, "12-16"],
+          ["Drop Dead Gorgeous", 1999, null, "Michael Patrick King · 46% RT", true, "12-16"],
+          ["The Blair Witch Project", 1999, null, "Daniel Myrick, Eduardo Sánchez · 86% RT", true, "12-16"],
+          ["South Park", 1999, null, "Trey Parker · 80% RT", true, "12-16"],
+          ["Rushmore", 1998, 4.5, "Wes Anderson · 90% RT", true, "12-16"],
+          ["There is Something about Mary", 1998, null, "Peter Farrelly, Bobby Farrelly · 83% RT", true, "12-16"],
+          ["An American werewolf in London", 1981, null, "John Landis · 89% RT", true, "12-16"],
+          ["12 Angry Men", 1957, 4.0, "Sidney Lumet · 100% RT", true, "12-16"],
+          ["Tommy Boy", 1995, null, "Peter Segal · 44% RT", true, "12-16"],
+          ["Batman (89)", 1989, 3.0, "Tim Burton · 72% RT", true, "12-16"],
+          ["The Shining", 1980, 4.5, "Stanley Kubrick · 83% RT", true, "12-16"],
+          ["The Elephant Man", 1980, null, "David Lynch · 92% RT", true, "12-16"],
+          ["Friday the 13th", 1980, null, "Sean S. Cunningham · 64% RT", true, "12-16"],
+          ["When Harry Met Sally", 1989, null, "Rob Reiner · 91% RT", true, "12-16"],
+          ["Dirty Dancing", 1987, null, "Emile Ardolino · 73% RT", true, "12-16"],
+          ["Poltergeist", 1982, null, "Tobe Hooper · 87% RT", true, "12-16"],
+          ["Akira", 1988, 3.5, "Katsuhiro Otomo · 90% RT", true, "12-16"],
+          ["Dead Poets Society", 1989, null, "Peter Weir · 84% RT", true, "12-16"],
+          ["The Rocky Horror Picture Show", 1975, null, "Jim Sharman · 80% RT", true, "12-16"],
+          ["His Girl Fridauy", 1940, null, "Howard Hawks · 98% RT", true, "12-16"],
+          ["Rocky", 1976, null, "John G. Avildsen · 91% RT", true, "12-16"],
+          ["Close Encounters of the Third Kind", 1977, 4.0, "Steven Spielberg · 94% RT", true, "12-16"],
+          ["Psycho", 1960, 4.5, "Alfred Hitchcock · 96% RT", true, "12-16"],
+          ["Anna and the Apoclaypse", 2017, 3.5, "John McPhail · 78% RT", true, "12-16"],
+          ["Rear Window", 1954, 4.5, "Alfred Hitchcock · 98% RT", true, "12-16"],
+          ["Airplane!", 1980, 4.0, "Jim Abrahams, David Zucker, Jerry Zucker · 97% RT", true, "12-16"],
+          ["Sinners", 2025, 4.5, "Ryan Coogler · 95% RT", true, "12-16"],
+          ["The Fifth Element", 1997, null, "Luc Besson · 71% RT", true, "12-16"],
+          ["What we do in the Shadow", null, 4.0, "", true, "12-16"],
+          ["Pan's Labyrinth", 2006, 5.0, "Guillermo del Toro · 95% RT", true, "16-18"],
+          ["Fight Club", 1999, 4.0, "David Fincher · 79% RT", true, "16-18"],
+          ["Pulp Fiction", 1994, 5.0, "Quentin Tarantino · 92% RT", true, "16-18"],
+          ["The Matrix", 1999, 4.5, "Lana Wachowski, Lilly Wachowski · 83% RT", true, "16-18"],
+          ["The Truman Show", 1998, 3.5, "Peter Weir · 95% RT", true, "16-18"],
+          ["Lady Bird", 2017, 4.0, "Greta Gerwig · 99% RT", true, "16-18"],
+          ["Se7en", 1995, 4.0, "David Fincher · 82% RT", true, "16-18"],
+          ["The Silence of the Lamb", 1991, 3.5, "Jonathan Demme · 95% RT", true, "16-18"],
+          ["Juno", 2007, 3.5, "Jason Reitman · 94% RT", true, "16-18"],
+          ["Catch Me if you can", 2002, 3.5, "Steven Spielberg · 96% RT", true, "16-18"],
+          ["Memnto", 2000, 4.0, "Christopher Nolan · 93% RT", true, "16-18"],
+          ["Little Miss Sunshine", 2006, 4.0, "Jonathan Dayton, Valerie Faris · 91% RT", true, "16-18"],
+          ["The Prestige", 2006, 4.0, "Christopher Nolan · 76% RT", true, "16-18"],
+          ["28 Days Later", 2002, 4.5, "Danny Boyle · 87% RT", true, "16-18"],
+          ["Kill Bill", 2003, 4.0, "Quentin Tarantino · 85% RT", true, "16-18"],
+          ["Dazed and Confused", 1993, 4.0, "Richard Linklater · 92% RT", true, "16-18"],
+          ["Rushmore", 1998, 4.5, "Wes Anderson · 90% RT", true, "16-18"],
+          ["Office Space", 1999, null, "Mike Judge · 80% RT", true, "16-18"],
+          ["Alien", 1979, 5.0, "Ridley Scott · 98% RT", true, "16-18"],
+          ["Snatch", 2000, 4.0, "Guy Ritchie · 73% RT", true, "16-18"],
+          ["Get Out", 2017, 4.0, "Jordan Peele · 98% RT", true, "16-18"],
+          ["Skyfall", 2012, 3.5, "Sam Mendes · 92% RT", true, "16-18"],
+          ["Sound of Metal", 2019, 4.0, "Darius Marder · 97% RT", true, "16-18"],
+          ["Snowpiercer", 2013, 4.0, "Bong Joon-ho · 94% RT", true, "16-18"],
+          ["Into the Wild", 2007, 3.0, "Sean Penn · 82% RT", true, "16-18"],
+          ["Death at a Funeral", 2007, null, "Frank Oz · 82% RT", true, "16-18"],
+          ["Crank", 2006, 3.5, "Mark Neveldine, Brian Taylor · 62% RT", true, "16-18"],
+          ["Eternal Sunshine of the Spotless Mind", 2004, 4.5, "Michel Gondry · 93% RT", true, "16-18"],
+          ["Before Sunrise", 1995, 4.5, "Richard Linklater · 100% RT", true, "16-18"],
+          ["Children of Men", 2006, 5.0, "Alfonso Cuarón · 92% RT", true, "16-18"],
+          ["Big Fish", 2003, 3.5, "Tim Burton · 76% RT", true, "16-18"],
+          ["Donnie Darko", 2001, 3.0, "Richard Kelly · 87% RT", true, "16-18"],
+          ["The Royal Tennebaums", 2001, 4.0, "Wes Anderson · 80% RT", true, "16-18"],
+          ["O Brother where art thou", 2000, 4.0, "Joel Coen, Ethan Coen · 77% RT", true, "16-18"],
+          ["Battle Royale", 2000, null, "Kinji Fukasaku · 87% RT", true, "16-18"],
+          ["Almost Famous", 2000, null, "Cameron Crowe · 89% RT", true, "16-18"],
+          ["Magnolia", 1999, 4.0, "Paul Thomas Anderson · 83% RT", true, "16-18"],
+          ["The Big Lebowski", 1998, 4.5, "Joel Coen, Ethan Coen · 83% RT", true, "16-18"],
+          ["Fargo", 1996, 4.0, "Joel Coen, Ethan Coen · 94% RT", true, "16-18"],
+          ["The Usual Suspect", 1995, 4.0, "Bryan Singer · 88% RT", true, "16-18"],
+          ["Schindlers List", 1993, 4.5, "Steven Spielberg · 97% RT", true, "16-18"],
+          ["Rervoir Dogs", 1992, 4.0, "Quentin Tarantino · 90% RT", true, "16-18"],
+          ["GoodFellas", 1990, 4.0, "Martin Scorsese · 96% RT", true, "16-18"],
+          ["Top Gun Maverick", 2022, 4.0, "Joseph Kosinski · 96% RT", true, "16-18"],
+          ["Both Blade Runner", null, 4.5, "", true, "16-18"],
+          ["Do the right thing", 1989, 4.5, "Spike Lee · 92% RT", true, "16-18"],
+          ["Clockwork Orange", 1971, 4.5, "Stanley Kubrick · 87% RT", true, "16-18"],
+          ["Life of Brian", 1979, null, "Terry Jones · 95% RT", true, "16-18"],
+          ["The Godfather", 1972, 5.0, "Francis Ford Coppola · 97% RT", true, "16-18"],
+          ["Annie Hall", 1977, null, "Woody Allen · 97% RT", true, "16-18"],
+          ["Kramer vs Karamer", 1979, null, "Robert Benton · 88% RT", true, "16-18"],
+          ["The Graduate", 1967, 4.5, "Mike Nichols · 85% RT", true, "16-18"],
+          ["Butch Cassidy and the Sundance Kid", 1969, null, "George Roy Hill · 89% RT", true, "16-18"],
+          ["Cable guy", 1996, null, "Ben Stiller · 53% RT", true, "16-18"],
+          ["Exorcist", 1973, 4.0, "William Friedkin · 84% RT", true, "16-18"],
+          ["Annie Hall", 1977, null, "Woody Allen · 97% RT", true, "16-18"],
+          ["Bridesmaid", 2011, 3.5, "Paul Feig · 90% RT", true, "16-18"],
+          ["Ladybird", 2017, 4.0, "Greta Gerwig · 99% RT", true, "16-18"],
+          ["Cinema Paradiso", 1988, 4.5, "Giuseppe Tornatore · 91% RT", true, "18-24"],
+          ["The Host", 2006, 4.0, "Bong Joon-ho · 93% RT", true, "18-24"],
+          ["Parasite", 2019, 5.0, "Bong Joon-ho · 99% RT", true, "18-24"],
+          ["The Social Network", 2010, 4.5, "David Fincher · 96% RT", true, "18-24"],
+          ["2001: A Space Odyessy", 1968, 5.0, "Stanley Kubrick · 92% RT", true, "18-24"],
+          ["Amelie", 2001, 4.0, "Jean-Pierre Jeunet · 90% RT", true, "18-24"],
+          ["NO Country For Old men", 2007, 4.5, "Joel Coen, Ethan Coen · 93% RT", true, "18-24"],
+          ["Lost In Translation", 2003, 4.5, "Sofia Coppola · 95% RT", true, "18-24"],
+          ["There will be Blood", 2007, 4.5, "Paul Thomas Anderson · 91% RT", true, "18-24"],
+          ["Requiem For a Dream", 2000, 3.5, "Darren Aronofsky · 78% RT", true, "18-24"],
+          ["Trainspotting", 1996, 3.5, "Danny Boyle · 89% RT", true, "18-24"],
+          ["Inglourious Basterds", 2009, 4.0, "Quentin Tarantino · 89% RT", true, "18-24"],
+          ["Oldboy", 2003, 4.5, "Park Chan-wook · 81% RT", true, "18-24"],
+          ["Being John Malkovich", 1999, 4.0, "Spike Jonze · 94% RT", true, "18-24"],
+          ["American History X", 1998, 4.0, "Tony Kaye · 83% RT", true, "18-24"],
+          ["Boogie Nights", 1997, 4.0, "Paul Thomas Anderson · 93% RT", true, "18-24"],
+          ["12 Monkeys", 1995, null, "Terry Gilliam · 88% RT", true, "18-24"],
+          ["Ex Machina", 2014, 4.5, "Alex Garland · 92% RT", true, "18-24"],
+          ["City of God", 2002, null, "Fernando Meirelles, Kátia Lund · 91% RT", true, "18-24"],
+          ["Brazil", 1985, 4.0, "Terry Gilliam · 98% RT", true, "18-24"],
+          ["The Orphange", 2007, null, "J.A. Bayona · 87% RT", true, "18-24"],
+          ["Network", 1976, null, "Sidney Lumet · 92% RT", true, "18-24"],
+          ["Dr. Strangelove", 1964, 4.5, "Stanley Kubrick · 98% RT", true, "18-24"],
+          ["The Apartment", 1960, 4.5, "Billy Wilder · 93% RT", true, "18-24"],
+          ["Seven Samuari", 1954, 4.5, "Akira Kurosawa · 100% RT", true, "18-24"],
+          ["Breathless", 1960, 4.5, "Jean-Luc Godard · 97% RT", true, "18-24"],
+          ["The Graduate", 1967, 4.5, "Mike Nichols · 85% RT", true, "18-24"],
+          ["Rashamon", 1950, null, "Akira Kurosawa · 98% RT", true, "18-24"],
+          ["Before Sunset", 2004, 5.0, "Richard Linklater · 95% RT", true, "18-24"],
+          ["Arrival", 2016, 5.0, "Denis Villeneuve · 94% RT", true, "18-24"],
+          ["Sideways", 2004, null, "Alexander Payne · 97% RT", true, "24-30"],
+          ["Before Midnight", 2013, 4.5, "Richard Linklater · 98% RT", true, "24-30"]
+        ];
+const TV_DATA = [
+          ["Community", null, null, "", true],
+          ["Office", null, null, "", true],
+          ["X-files", null, null, "", true],
+          ["Game of Thrones", null, null, "", true],
+          ["Seinfeld", null, null, "", true],
+          ["Rick and Morty", null, null, "", true],
+          ["Mad Men", null, null, "", true],
+          ["Scrubs", null, null, "", true],
+          ["Breaking Bad", null, null, "", true],
+          ["Midnight Mass", null, null, "", true],
+          ["Arrested Development", null, null, "", true],
+          ["Inbetweeners", null, null, "", true],
+          ["The IT Crowd", null, null, "", true],
+          ["Futurama", null, null, "", true],
+          ["Taskmaster", null, null, "", true],
+          ["8 out of ten cats do countdown", null, null, "", true],
+          ["Fleabag", null, null, "", true],
+          ["The Mitchell and Webb Look", null, null, "", true],
+          ["Qi", null, null, "", true],
+          ["Avatar the Last Airbender", null, null, "", true],
+          ["The Twilight Zone", null, null, "", true],
+          ["Top Gear Specials", null, null, "", true],
+          ["Clarksons Farm", null, null, "", true],
+          ["Firefly", null, null, "", true],
+          ["Cowboy Bebop", null, null, "", true],
+          ["Freak and Geeks", null, null, "", true],
+          ["Curb your Ethusism", null, null, "", true],
+          ["Ted Lasso", null, null, "", true],
+          ["One Punch Man Season 1", null, null, "", true],
+          ["Haunting on hill house", null, null, "", true]
+        ];
+const RANDOMS_DATA = [
+          ["Tommy boy", 1995, null, "Peter Segal · 44% RT", true],
+          ["Austin powers", null, null, "", true],
+          ["Tropic Thunder", 2008, 3.5, "", true],
+          ["The other guy", null, null, "", true],
+          ["P", null, null, "", true],
+          ["Sinners", 2025, 4.5, "Ryan Coogler · 95% RT", true],
+          ["Disturbia", null, null, "", true],
+          ["Top Gun Mavericks", null, null, "", true],
+          ["Superman (2025)", null, null, "", true],
+          ["Aquamarine", null, null, "", true],
+          ["The Guest", null, null, "", true],
+          ["One battle after another", 2025, 4.5, "", true],
+          ["Legally blonde", null, null, "", true],
+          ["Bridesmaid", 2011, null, "Paul Feig · 90% RT", true]
+        ];
+
 function seedState() {
   return {
-    activeId: 'movies',
+    version: 2,
+    activeId: 'byage',
     lists: [
       {
-        id: 'movies', name: 'Movies', emoji: '🎬', type: 'movies',
-        items: seedItems([
-          ['The Nice Guys', 2016, 4, 'Shane Black · 92% RT'],
-          ['Poor Things', 2023, 4.5, 'Yorgos Lanthimos · 92% RT'],
-          ['Submarine', 2010, null, 'Richard Ayoade · 86% RT']
-        ])
+        id: 'byage', name: 'Movies by Age', emoji: '🎞️', type: 'movies',
+        brackets: BRACKETS.slice(),
+        items: seedItems(BYAGE_DATA)
       },
       {
         id: 'tv', name: 'TV Shows', emoji: '📺', type: 'tv',
-        items: []
+        items: seedItems(TV_DATA)
+      },
+      {
+        id: 'randoms', name: 'Good but Random', emoji: '🍿', type: 'movies',
+        items: seedItems(RANDOMS_DATA)
       },
       {
         id: 'action', name: 'Action', emoji: '💥', type: 'movies',
@@ -483,10 +795,34 @@ try {
 if (!state || !Array.isArray(state.lists) || !state.lists.length) {
   state = seedState();
   save();
+} else if (!state.version) {
+  // v1 -> v2: fold in the spreadsheet lists without touching user edits
+  (function migrate() {
+    const seeds = seedState();
+    function seed(id) { return seeds.lists.filter(function (l) { return l.id === id; })[0]; }
+    if (!state.lists.some(function (l) { return l.id === 'byage'; })) {
+      state.lists.unshift(seed('byage'));
+    }
+    const tvl = state.lists.filter(function (l) { return l.id === 'tv'; })[0];
+    if (tvl && !tvl.items.length) tvl.items = seed('tv').items;
+    if (!state.lists.some(function (l) { return l.id === 'randoms'; })) {
+      const at = state.lists.map(function (l) { return l.id; }).indexOf('tv');
+      state.lists.splice(at >= 0 ? at + 1 : state.lists.length, 0, seed('randoms'));
+    }
+    // drop the old 3-movie starter list only if it was never touched
+    const mv = state.lists.filter(function (l) { return l.id === 'movies'; })[0];
+    const starter = ['the nice guys', 'poor things', 'submarine'];
+    if (mv && mv.items.length === 3 && mv.items.every(function (i) { return starter.indexOf(i.title.toLowerCase()) >= 0; })) {
+      state.lists = state.lists.filter(function (l) { return l.id !== 'movies'; });
+    }
+    state.activeId = 'byage';
+    state.version = 2;
+    save();
+  })();
 }
 
 // per-list view settings (not persisted)
-const view = { search: '', sort: 'added', filter: 'all' };
+const view = { search: '', sort: 'added', filter: 'all', bracket: '' };
 
 function save() { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
@@ -526,7 +862,9 @@ function renderNav() {
   nav.querySelectorAll('.list-btn').forEach(function (b) {
     b.addEventListener('click', function () {
       state.activeId = b.dataset.id;
-      view.search = ''; view.filter = 'all';
+      const target = state.lists.filter(function (l) { return l.id === b.dataset.id; })[0];
+      view.search = ''; view.filter = 'all'; view.bracket = '';
+      view.sort = (target && target.brackets) ? 'bracket' : 'added';
       save(); render();
     });
   });
@@ -545,10 +883,19 @@ function visibleItems(list) {
   }
   if (view.filter === 'watched') items = items.filter(function (it) { return it.watched; });
   if (view.filter === 'towatch') items = items.filter(function (it) { return !it.watched; });
+  if (view.bracket) items = items.filter(function (it) { return it.bracket === view.bracket; });
   const s = view.sort;
   if (s === 'az') items.sort(function (a, b) { return a.title.localeCompare(b.title); });
   else if (s === 'year') items.sort(function (a, b) { return (b.year || 0) - (a.year || 0); });
   else if (s === 'rating') items.sort(function (a, b) { return (b.rating || 0) - (a.rating || 0); });
+  else if (s === 'bracket') {
+    const order = list.brackets || [];
+    items.sort(function (a, b) {
+      const ai = a.bracket ? order.indexOf(a.bracket) : 99;
+      const bi = b.bracket ? order.indexOf(b.bracket) : 99;
+      return (ai - bi) || ((a.added || 0) - (b.added || 0));
+    });
+  }
   else items.sort(function (a, b) { return (b.added || 0) - (a.added || 0); });
   return items;
 }
@@ -565,6 +912,7 @@ function renderPanel() {
   const typeLabel = list.type === 'tv' ? 'shows' : list.type === 'mixed' ? 'titles' : 'movies';
 
   const items = visibleItems(list);
+  const hasBrackets = !!list.brackets;
 
   panel.innerHTML =
     '<div class="list-header">' +
@@ -581,11 +929,24 @@ function renderPanel() {
         (unwatched ? ' &nbsp;·&nbsp; <b>' + unwatched + '</b> to watch' : '') +
       '</div>' +
     '</div>' +
-    '<form class="add-row" id="addForm">' +
+    '<form class="add-row' + (hasBrackets ? ' has-bracket' : '') + '" id="addForm">' +
       '<input type="text" id="addTitle" placeholder="Add a ' + (list.type === 'tv' ? 'show' : 'movie') + ' — e.g. Heat or Heat (1995)" autocomplete="off">' +
       '<input type="number" id="addYear" placeholder="Year" min="1888" max="2100">' +
+      (hasBrackets
+        ? '<select id="addBracket"><option value="">Ages?</option>' +
+          list.brackets.map(function (b) {
+            return '<option value="' + b + '"' + (view.bracket === b ? ' selected' : '') + '>' + b + '</option>';
+          }).join('') + '</select>'
+        : '') +
       '<button class="primary" type="submit">＋ Add</button>' +
     '</form>' +
+    (hasBrackets
+      ? '<div class="bracket-pills" id="bracketPills">' +
+        '<button data-b="" class="' + (!view.bracket ? 'on' : '') + '">All Ages</button>' +
+        list.brackets.map(function (b) {
+          return '<button data-b="' + b + '" class="' + (view.bracket === b ? 'on' : '') + '">' + b + '</button>';
+        }).join('') + '</div>'
+      : '') +
     '<div class="controls">' +
       '<input type="text" id="searchBox" placeholder="Search this list…" value="' + esc(view.search) + '">' +
       '<div class="seg" id="filterSeg">' +
@@ -594,19 +955,14 @@ function renderPanel() {
         '<button data-f="towatch">To Watch</button>' +
       '</div>' +
       '<select id="sortSel">' +
+        (hasBrackets ? '<option value="bracket">Age order</option>' : '') +
         '<option value="added">Recently added</option>' +
         '<option value="az">A–Z</option>' +
         '<option value="year">Year (new first)</option>' +
         '<option value="rating">My rating</option>' +
       '</select>' +
     '</div>' +
-    (items.length
-      ? '<ul class="items">' + items.map(itemRow).join('') + '</ul>'
-      : '<div class="empty-state"><div class="big">' + esc(list.emoji) + '</div>' +
-        (list.items.length
-          ? 'Nothing matches that search.'
-          : 'This list is empty — add your first ' + (list.type === 'tv' ? 'show' : 'movie') + ' above.') +
-        '</div>');
+    itemsHTML(list, items);
 
   // wire header tools
   document.getElementById('renameListBtn').addEventListener('click', function () { openListModal(list); });
@@ -637,15 +993,29 @@ function renderPanel() {
   sel.value = view.sort;
   sel.addEventListener('change', function () { view.sort = sel.value; refreshItemsOnly(list); });
 
+  const pills = document.getElementById('bracketPills');
+  if (pills) {
+    pills.querySelectorAll('button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        view.bracket = b.dataset.b;
+        pills.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); });
+        const ab = document.getElementById('addBracket');
+        if (ab && view.bracket) ab.value = view.bracket;
+        refreshItemsOnly(list);
+      });
+    });
+  }
+
   wireItemRows(list);
 }
 
-function itemRow(it) {
+function itemRow(it, showChip) {
   return '<li class="item' + (it.watched ? ' watched' : '') + '" data-id="' + it.id + '">' +
     '<button class="watch-toggle" title="' + (it.watched ? 'Watched — click to move to To Watch' : 'Not watched yet — click to mark seen') + '">' +
       (it.watched ? '✓' : '◌') + '</button>' +
     '<div class="body">' +
-      '<div class="t">' + esc(it.title) + (it.year ? '<span class="yr">' + it.year + '</span>' : '') + '</div>' +
+      '<div class="t">' + esc(it.title) + (it.year ? '<span class="yr">' + it.year + '</span>' : '') +
+        (showChip && it.bracket ? '<span class="bracket-chip">' + esc(it.bracket) + '</span>' : '') + '</div>' +
       (it.notes ? '<div class="notes">' + esc(it.notes) + '</div>' : '') +
     '</div>' +
     '<div class="stars' + (it.rating ? '' : ' empty') + '" title="' + (it.rating ? 'My rating: ' + it.rating + '/5' : 'Not rated') + '">' + starsText(it.rating) + '</div>' +
@@ -655,14 +1025,35 @@ function itemRow(it) {
     '</div></li>';
 }
 
+function itemsHTML(list, items) {
+  if (!items.length) {
+    return '<div class="empty-state"><div class="big">' + esc(list.emoji) + '</div>' +
+      (list.items.length
+        ? 'Nothing matches that view.'
+        : 'This list is empty — add your first ' + (list.type === 'tv' ? 'show' : 'movie') + ' above.') +
+      '</div>';
+  }
+  const grouped = list.brackets && view.sort === 'bracket' && !view.bracket;
+  if (grouped) {
+    let html = '<ul class="items">';
+    let cur = null;
+    items.forEach(function (it) {
+      const key = it.bracket || '__none__';
+      if (key !== cur) {
+        cur = key;
+        html += '<li class="bracket-head">' + (it.bracket ? 'Ages ' + esc(it.bracket) : 'Unsorted') + '</li>';
+      }
+      html += itemRow(it, false);
+    });
+    return html + '</ul>';
+  }
+  const chips = !!list.brackets;
+  return '<ul class="items">' + items.map(function (it) { return itemRow(it, chips); }).join('') + '</ul>';
+}
+
 function refreshItemsOnly(list) {
-  const items = visibleItems(list);
   const old = document.querySelector('.items, .empty-state');
-  const html = items.length
-    ? '<ul class="items">' + items.map(itemRow).join('') + '</ul>'
-    : '<div class="empty-state"><div class="big">' + esc(list.emoji) + '</div>' +
-      (list.items.length ? 'Nothing matches that search.' : 'This list is empty.') + '</div>';
-  if (old) old.outerHTML = html;
+  if (old) old.outerHTML = itemsHTML(list, visibleItems(list));
   wireItemRows(list);
 }
 
@@ -704,9 +1095,11 @@ function addItem(list) {
   });
   if (dup) { toast('“' + title + '” is already on this list'); return; }
 
+  const bracketSel = document.getElementById('addBracket');
   list.items.push({
     id: uid(), title: title, year: year, rating: null, notes: '',
-    watched: true, added: Date.now()
+    watched: true, bracket: bracketSel ? (bracketSel.value || null) : null,
+    added: Date.now()
   });
   save();
   view.search = '';
@@ -799,6 +1192,7 @@ function copyList(list) {
   const lines = [list.emoji + ' ' + list.name.toUpperCase()];
   list.items.forEach(function (it) {
     lines.push('• ' + it.title + (it.year ? ' (' + it.year + ')' : '') +
+      (it.bracket ? ' [ages ' + it.bracket + ']' : '') +
       (it.rating ? ' — ' + it.rating + '★' : '') + (it.watched ? '' : '  [to watch]'));
   });
   const text = lines.join('\n');
@@ -844,6 +1238,16 @@ function openItemModal(list, it) {
   document.getElementById('itemTitleInput').value = it.title;
   document.getElementById('itemYearInput').value = it.year || '';
   document.getElementById('itemNotesInput').value = it.notes || '';
+  const bField = document.getElementById('itemBracketField');
+  if (list.brackets) {
+    const bSel = document.getElementById('itemBracketInput');
+    bSel.innerHTML = '<option value="">—</option>' + list.brackets.map(function (b) {
+      return '<option value="' + b + '"' + (it.bracket === b ? ' selected' : '') + '>' + b + '</option>';
+    }).join('');
+    bField.style.display = '';
+  } else {
+    bField.style.display = 'none';
+  }
   modalRating = it.rating || null;
   renderStarPicker();
   document.getElementById('itemModal').classList.add('open');
@@ -859,6 +1263,9 @@ document.getElementById('itemSaveBtn').addEventListener('click', function () {
   editingItem.year = parseInt(document.getElementById('itemYearInput').value, 10) || null;
   editingItem.notes = document.getElementById('itemNotesInput').value.trim();
   editingItem.rating = modalRating;
+  if (editingItemList.brackets) {
+    editingItem.bracket = document.getElementById('itemBracketInput').value || null;
+  }
   save();
   document.getElementById('itemModal').classList.remove('open');
   render();
@@ -916,6 +1323,7 @@ document.getElementById('importFile').addEventListener('change', function (ev) {
    Boot
    ============================================================ */
 function render() { renderNav(); renderPanel(); }
+if (activeList().brackets) view.sort = 'bracket';
 render();
 </script>
 </body>
