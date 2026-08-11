@@ -177,6 +177,31 @@
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239fb0e8' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");
     background-repeat: no-repeat; background-position: right 10px center; }
 
+  /* ---------- TMDB search dropdown ---------- */
+  .combo { position: relative; min-width: 0; }
+  .combo input { width: 100%; }
+  .suggest {
+    display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 30;
+    background: var(--panel-2); border: 1px solid var(--gold); border-radius: 12px;
+    max-height: 330px; overflow: auto; box-shadow: 0 14px 34px rgba(1, 8, 40, .6);
+  }
+  .suggest.open { display: block; }
+  .sg {
+    display: flex; gap: 11px; align-items: center; padding: 8px 12px; cursor: pointer;
+    border-bottom: 1px solid rgba(42, 83, 184, .3);
+  }
+  .sg:last-child { border-bottom: 0; }
+  .sg:hover { background: var(--gold-soft); }
+  .sg img, .sg .sg-noimg {
+    width: 34px; height: 50px; flex: none; border-radius: 5px; object-fit: cover;
+    background: rgba(2, 14, 60, .6);
+  }
+  .sg .sg-noimg { display: grid; place-items: center; font-size: 15px; }
+  .sg .sg-t { font-size: 13.5px; font-weight: 600; }
+  .sg .sg-y { color: var(--muted); font-size: 11.5px; font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+  .hint { color: var(--muted); font-size: 13px; line-height: 1.55; margin-bottom: 14px; }
+  .hint b { color: var(--gold); }
+
   /* ---------- Age bracket pills ---------- */
   .bracket-pills { display: flex; gap: 6px; flex-wrap: wrap; padding: 12px 18px 0; }
   .bracket-pills button {
@@ -363,6 +388,7 @@
     <div class="sub">BE KIND &middot; PLEASE REWIND &nbsp;&mdash;&nbsp; ADD &middot; CURATE &middot; RANK</div>
   </div>
   <div class="header-actions">
+    <button id="tmdbBtn" title="Connect TMDB to search movies & shows as you type">🔑 TMDB</button>
     <button id="exportBtn" title="Download all lists as a JSON backup">⬇ Export</button>
     <button id="importBtn" title="Restore lists from a JSON backup">⬆ Import</button>
     <input type="file" id="importFile" accept="application/json" style="display:none">
@@ -442,6 +468,23 @@
     <div class="modal-actions">
       <button class="ghost" id="itemCancelBtn">Cancel</button>
       <button class="primary" id="itemSaveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- TMDB connect modal -->
+<div class="modal-back" id="tmdbModal">
+  <div class="modal">
+    <h3>TMDB Search</h3>
+    <p class="hint">Paste your TMDB <b>API Read Access Token</b> and the Add box will search The Movie Database as you type — pick a result to auto-fill the title, year, and details. Get a free token at themoviedb.org &rarr; Settings &rarr; API. The token is stored only in this browser.</p>
+    <div class="field">
+      <label>API Read Access Token</label>
+      <textarea id="tmdbTokenInput" rows="3" placeholder="eyJhbGciOi…" spellcheck="false"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="danger ghost" id="tmdbDisconnectBtn">Disconnect</button>
+      <button class="ghost" id="tmdbCancelBtn">Cancel</button>
+      <button class="primary" id="tmdbSaveBtn">Save</button>
     </div>
   </div>
 </div>
@@ -1032,7 +1075,11 @@ function renderPanel() {
       '</div>' +
     '</div>' +
     '<form class="add-row' + (hasBrackets ? ' has-bracket' : '') + '" id="addForm">' +
-      '<input type="text" id="addTitle" placeholder="Add a ' + (list.type === 'tv' ? 'show' : 'movie') + ' — e.g. Heat or Heat (1995)" autocomplete="off">' +
+      '<div class="combo">' +
+        '<input type="text" id="addTitle" placeholder="Add a ' + (list.type === 'tv' ? 'show' : 'movie') +
+          (ui.tmdbToken ? ' — start typing to search TMDB' : ' — e.g. Heat or Heat (1995)') + '" autocomplete="off">' +
+        '<div class="suggest" id="suggestBox"></div>' +
+      '</div>' +
       '<input type="number" id="addYear" placeholder="Year" min="1888" max="2100">' +
       (hasBrackets
         ? '<select id="addBracket"><option value="">Ages?</option>' +
@@ -1090,6 +1137,7 @@ function renderPanel() {
     ev.preventDefault();
     addItem(list);
   });
+  wireSuggest(list);
 
   // search / filter / sort
   const sb = document.getElementById('searchBox');
@@ -1298,6 +1346,127 @@ function wireItemRows(list) {
 }
 
 /* ============================================================
+   TMDB search-as-you-type
+   ============================================================ */
+let suggestTimer = null;
+let suggestAbort = null;
+let pendingMeta = null; // details of the picked TMDB result, consumed by addItem
+
+function tmdbFetch(path, signal) {
+  return fetch('https://api.themoviedb.org/3' + path, {
+    headers: { Authorization: 'Bearer ' + ui.tmdbToken },
+    signal: signal
+  }).then(function (r) {
+    if (!r.ok) throw new Error('TMDB ' + r.status);
+    return r.json();
+  });
+}
+
+function closeSuggest() {
+  const box = document.getElementById('suggestBox');
+  if (box) { box.classList.remove('open'); box.innerHTML = ''; }
+}
+
+function wireSuggest(list) {
+  const input = document.getElementById('addTitle');
+  if (!input || !document.getElementById('suggestBox')) return;
+  input.addEventListener('input', function () {
+    pendingMeta = null;
+    clearTimeout(suggestTimer);
+    const q = input.value.trim();
+    if (!ui.tmdbToken || q.length < 2) { closeSuggest(); return; }
+    suggestTimer = setTimeout(function () { runSearch(list, q); }, 300);
+  });
+  input.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape') closeSuggest();
+  });
+}
+
+function runSearch(list, q) {
+  if (suggestAbort) suggestAbort.abort();
+  suggestAbort = new AbortController();
+  const kind = list.type === 'tv' ? 'tv' : list.type === 'mixed' ? 'multi' : 'movie';
+  tmdbFetch('/search/' + kind + '?include_adult=false&query=' + encodeURIComponent(q), suggestAbort.signal)
+    .then(function (data) {
+      let results = data.results || [];
+      if (kind === 'multi') {
+        results = results.filter(function (r) { return r.media_type === 'movie' || r.media_type === 'tv'; });
+      }
+      renderSuggest(list, results.slice(0, 7));
+    })
+    .catch(function (e) {
+      if (e.name !== 'AbortError') {
+        closeSuggest();
+        if (String(e.message).indexOf('401') >= 0) toast('TMDB rejected the token — recheck it via the 🔑 TMDB button');
+      }
+    });
+}
+
+function renderSuggest(list, results) {
+  const box = document.getElementById('suggestBox');
+  if (!box) return;
+  if (!results.length) { closeSuggest(); return; }
+  box.innerHTML = results.map(function (r, i) {
+    const isTV = r.media_type === 'tv' || (list.type === 'tv' && !r.media_type);
+    const title = isTV ? r.name : r.title;
+    const date = (isTV ? r.first_air_date : r.release_date) || '';
+    return '<div class="sg" data-i="' + i + '">' +
+      (r.poster_path
+        ? '<img src="https://image.tmdb.org/t/p/w92' + r.poster_path + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">'
+        : '<div class="sg-noimg">🎬</div>') +
+      '<div><div class="sg-t">' + esc(title) + '</div>' +
+      '<div class="sg-y">' + (date ? date.slice(0, 4) : '—') + (isTV ? ' · TV' : '') +
+      (r.vote_average ? ' · ★ ' + r.vote_average.toFixed(1) : '') + '</div></div></div>';
+  }).join('');
+  box.classList.add('open');
+  box.querySelectorAll('.sg').forEach(function (el) {
+    el.addEventListener('click', function () {
+      pickSuggest(list, results[parseInt(el.dataset.i, 10)]);
+    });
+  });
+}
+
+function pickSuggest(list, r) {
+  const isTV = r.media_type === 'tv' || (list.type === 'tv' && !r.media_type);
+  const title = (isTV ? r.name : r.title) || '';
+  const date = (isTV ? r.first_air_date : r.release_date) || '';
+  document.getElementById('addTitle').value = title;
+  document.getElementById('addYear').value = date ? date.slice(0, 4) : '';
+  closeSuggest();
+  pendingMeta = {
+    tmdbId: r.id, kind: isTV ? 'tv' : 'movie',
+    poster: r.poster_path || null, notes: r.vote_average ? 'TMDB ' + r.vote_average.toFixed(1) : ''
+  };
+  fetchTmdbNotes(list, pendingMeta, title);
+  document.getElementById('addTitle').focus();
+}
+
+function fetchTmdbNotes(list, meta, title) {
+  const path = meta.kind === 'tv'
+    ? '/tv/' + meta.tmdbId
+    : '/movie/' + meta.tmdbId + '?append_to_response=credits';
+  tmdbFetch(path).then(function (d) {
+    let who = '';
+    if (meta.kind === 'tv') {
+      who = (d.created_by || []).map(function (c) { return c.name; }).slice(0, 2).join(', ');
+    } else {
+      const dir = ((d.credits || {}).crew || []).filter(function (c) { return c.job === 'Director'; });
+      who = dir.map(function (c) { return c.name; }).slice(0, 2).join(', ');
+    }
+    const rating = d.vote_average ? 'TMDB ' + d.vote_average.toFixed(1) : '';
+    const notes = [who, rating].filter(Boolean).join(' · ');
+    meta.notes = notes;
+    // if the item was already added before this resolved, backfill its notes
+    const it = list.items.find(function (x) { return x.tmdbId === meta.tmdbId && !x.notes; });
+    if (it && notes) {
+      it.notes = notes;
+      save();
+      if (activeList().id === list.id) refreshItemsOnly(list);
+    }
+  }).catch(function () { /* details are a nice-to-have */ });
+}
+
+/* ============================================================
    Adding items
    ============================================================ */
 function addItem(list) {
@@ -1317,11 +1486,18 @@ function addItem(list) {
   if (dup) { toast('“' + title + '” is already on this list'); return; }
 
   const bracketSel = document.getElementById('addBracket');
-  list.items.push({
+  const item = {
     id: uid(), title: title, year: year, rating: null, notes: '',
     watched: true, bracket: bracketSel ? (bracketSel.value || null) : null,
     added: Date.now()
-  });
+  };
+  if (pendingMeta) {
+    item.tmdbId = pendingMeta.tmdbId;
+    if (pendingMeta.poster) item.poster = pendingMeta.poster;
+    if (pendingMeta.notes) item.notes = pendingMeta.notes;
+    pendingMeta = null;
+  }
+  list.items.push(item);
   save();
   view.search = '';
   render();
@@ -1514,6 +1690,48 @@ document.addEventListener('keydown', function (ev) {
   if (ev.key === 'Escape') {
     document.querySelectorAll('.modal-back.open').forEach(function (mb) { mb.classList.remove('open'); });
   }
+});
+
+/* ============================================================
+   TMDB connect modal
+   ============================================================ */
+const tmdbBtn = document.getElementById('tmdbBtn');
+function syncTmdbBtn() {
+  tmdbBtn.textContent = ui.tmdbToken ? '🔑 TMDB ✓' : '🔑 TMDB';
+  tmdbBtn.title = ui.tmdbToken
+    ? 'TMDB search connected — click to manage'
+    : 'Connect TMDB to search movies & shows as you type';
+}
+tmdbBtn.addEventListener('click', function () {
+  document.getElementById('tmdbTokenInput').value = ui.tmdbToken || '';
+  document.getElementById('tmdbDisconnectBtn').style.display = ui.tmdbToken ? '' : 'none';
+  document.getElementById('tmdbModal').classList.add('open');
+  setTimeout(function () { document.getElementById('tmdbTokenInput').focus(); }, 50);
+});
+document.getElementById('tmdbCancelBtn').addEventListener('click', function () {
+  document.getElementById('tmdbModal').classList.remove('open');
+});
+document.getElementById('tmdbSaveBtn').addEventListener('click', function () {
+  const t = document.getElementById('tmdbTokenInput').value.trim();
+  if (!t) { document.getElementById('tmdbTokenInput').focus(); return; }
+  ui.tmdbToken = t;
+  saveUI(); syncTmdbBtn();
+  document.getElementById('tmdbModal').classList.remove('open');
+  renderPanel();
+  toast('TMDB connected — start typing in the Add box to search');
+});
+document.getElementById('tmdbDisconnectBtn').addEventListener('click', function () {
+  delete ui.tmdbToken;
+  saveUI(); syncTmdbBtn();
+  document.getElementById('tmdbModal').classList.remove('open');
+  renderPanel();
+  toast('TMDB disconnected');
+});
+syncTmdbBtn();
+
+// close the search dropdown when clicking anywhere else
+document.addEventListener('click', function (ev) {
+  if (!ev.target.closest('.combo')) closeSuggest();
 });
 
 /* ============================================================
