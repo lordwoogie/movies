@@ -1063,6 +1063,9 @@ function renderPanel() {
       '<div class="list-title-row">' +
         '<h2><span>' + esc(list.emoji) + '</span> ' + esc(list.name) + '</h2>' +
         '<div class="list-tools">' +
+          (ui.tmdbToken
+            ? '<button id="enrichBtn" title="Look up every title in this list on TMDB and fill in year, director/creator, and score">⟳ Fill from TMDB</button>'
+            : '') +
           '<button id="renameListBtn" title="Rename or restyle this list">✎ Edit</button>' +
           '<button id="copyListBtn" title="Copy list as text">⧉ Copy</button>' +
           '<button id="deleteListBtn" class="danger" title="Delete this list">🗑</button>' +
@@ -1128,6 +1131,8 @@ function renderPanel() {
     itemsHTML(list, items);
 
   // wire header tools
+  const enrichEl = document.getElementById('enrichBtn');
+  if (enrichEl) enrichEl.addEventListener('click', function () { enrichList(list, enrichEl); });
   document.getElementById('renameListBtn').addEventListener('click', function () { openListModal(list); });
   document.getElementById('deleteListBtn').addEventListener('click', function () { deleteList(list); });
   document.getElementById('copyListBtn').addEventListener('click', function () { copyList(list); });
@@ -1464,6 +1469,112 @@ function fetchTmdbNotes(list, meta, title) {
       if (activeList().id === list.id) refreshItemsOnly(list);
     }
   }).catch(function () { /* details are a nice-to-have */ });
+}
+
+/* ============================================================
+   Bulk enrich a whole list from TMDB
+   ============================================================ */
+function tmdbYear(r, isTV) {
+  const d = (isTV ? r.first_air_date : r.release_date) || '';
+  return d ? parseInt(d.slice(0, 4), 10) : null;
+}
+
+// Pick the result that best matches the stored title (and year, when we have one).
+function bestMatch(results, item, isTV) {
+  if (!results.length) return null;
+  const want = item.title.toLowerCase().replace(/^the\s+/, '').replace(/[^a-z0-9]/g, '');
+  let best = null, bestScore = -1;
+  results.slice(0, 8).forEach(function (r, idx) {
+    const name = ((isTV ? r.name : r.title) || '').toLowerCase().replace(/^the\s+/, '').replace(/[^a-z0-9]/g, '');
+    let score = 0;
+    if (name === want) score += 10;
+    else if (name.indexOf(want) === 0 || want.indexOf(name) === 0) score += 5;
+    if (item.year && tmdbYear(r, isTV) === item.year) score += 4;
+    score += (r.popularity || 0) / 500;   // tie-break toward the better-known title
+    score -= idx * 0.01;                  // keep TMDB's own ranking as the final tie-break
+    if (score > bestScore) { bestScore = score; best = r; }
+  });
+  return best;
+}
+
+async function lookupOne(list, item) {
+  const kinds = list.type === 'tv' ? ['tv'] : list.type === 'mixed' ? ['movie', 'tv'] : ['movie'];
+  for (let i = 0; i < kinds.length; i++) {
+    const kind = kinds[i];
+    const isTV = kind === 'tv';
+    const data = await tmdbFetch('/search/' + kind + '?include_adult=false&query=' + encodeURIComponent(item.title));
+    const hit = bestMatch(data.results || [], item, isTV);
+    if (!hit) continue;
+    const detail = await tmdbFetch(isTV
+      ? '/tv/' + hit.id
+      : '/movie/' + hit.id + '?append_to_response=credits');
+    const who = isTV
+      ? (detail.created_by || []).map(function (c) { return c.name; }).slice(0, 2).join(', ')
+      : (((detail.credits || {}).crew) || []).filter(function (c) { return c.job === 'Director'; })
+          .map(function (c) { return c.name; }).slice(0, 2).join(', ');
+    const bits = [];
+    if (who) bits.push(who);
+    if (isTV && detail.number_of_seasons) {
+      bits.push(detail.number_of_seasons + ' season' + (detail.number_of_seasons > 1 ? 's' : ''));
+    }
+    if (detail.vote_average) bits.push('TMDB ' + detail.vote_average.toFixed(1));
+    return {
+      tmdbId: hit.id,
+      poster: hit.poster_path || null,
+      year: tmdbYear(hit, isTV),
+      notes: bits.join(' · '),
+      matchedName: (isTV ? hit.name : hit.title) || ''
+    };
+  }
+  return null;
+}
+
+async function enrichList(list, btn) {
+  const todo = list.items.filter(function (it) { return !it.tmdbId; });
+  if (!todo.length) { toast('Every title in this list already has TMDB details'); return; }
+  if (!confirm('Look up ' + todo.length + ' title' + (todo.length > 1 ? 's' : '') + ' in “' + list.name + '” on TMDB?\n\n' +
+      'Year and details are filled in where they are blank. Your ratings, notes you wrote, and seen check-offs are left alone.')) return;
+
+  const original = btn.textContent;
+  btn.disabled = true;
+  let filled = 0;
+  const missed = [];
+
+  for (let i = 0; i < todo.length; i++) {
+    const it = todo[i];
+    btn.textContent = '⟳ ' + (i + 1) + '/' + todo.length + '…';
+    try {
+      const info = await lookupOne(list, it);
+      if (info) {
+        it.tmdbId = info.tmdbId;
+        if (info.poster) it.poster = info.poster;
+        if (!it.year && info.year) it.year = info.year;
+        if (!it.notes && info.notes) it.notes = info.notes;
+        filled++;
+      } else {
+        missed.push(it.title);
+      }
+    } catch (e) {
+      missed.push(it.title);
+      if (String(e.message).indexOf('401') >= 0) {
+        btn.disabled = false; btn.textContent = original;
+        save(); render();
+        toast('TMDB rejected the token — reconnect via the 🔑 TMDB button');
+        return;
+      }
+    }
+    if (i % 5 === 4) save();          // checkpoint so a mid-run close keeps progress
+    await new Promise(function (r) { setTimeout(r, 60); });
+  }
+
+  save();
+  btn.disabled = false;
+  render();
+  let msg = 'Filled in ' + filled + ' of ' + todo.length;
+  if (missed.length) {
+    msg += ' · no match: ' + missed.slice(0, 3).join(', ') + (missed.length > 3 ? ' +' + (missed.length - 3) + ' more' : '');
+  }
+  toast(msg);
 }
 
 /* ============================================================
