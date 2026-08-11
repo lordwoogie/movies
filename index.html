@@ -185,6 +185,38 @@
     border-bottom: 1px solid rgba(42,83,184,.45);
   }
 
+  /* ---------- Excel-style age columns ---------- */
+  .col-grid-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .col-grid { display: flex; min-width: max-content; align-items: stretch; }
+  .col { flex: 1 0 205px; max-width: 280px; border-right: 1px solid var(--line); }
+  .col:last-child { border-right: 0; }
+  .col-head {
+    background: rgba(2, 14, 60, .55); color: var(--gold);
+    font-family: 'Anton', sans-serif; font-size: 13.5px; letter-spacing: 2px;
+    text-transform: uppercase; padding: 10px 12px;
+    border-bottom: 2px solid var(--gold); white-space: nowrap;
+  }
+  .col-head .cnt {
+    color: var(--muted); font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px; margin-left: 8px; letter-spacing: 0;
+  }
+  .cell {
+    position: relative; padding: 8px 26px 8px 12px; cursor: pointer;
+    border-bottom: 1px solid rgba(42, 83, 184, .35);
+  }
+  .col-body .cell:nth-child(even) { background: rgba(255, 255, 255, .035); }
+  .cell:hover { background: rgba(249, 214, 22, .1) !important; }
+  .cell .ct { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; line-height: 1.3; }
+  .cell .cy { color: var(--muted); font-weight: 400; font-size: 11px; font-family: 'JetBrains Mono', monospace; }
+  .cell .cs { color: var(--gold); font-size: 10.5px; font-family: 'JetBrains Mono', monospace; letter-spacing: 1px; margin-top: 2px; }
+  .cell.blank { color: var(--muted); cursor: default; text-align: center; }
+  .cell .cx {
+    position: absolute; right: 3px; top: 5px; opacity: 0;
+    border: 0; background: transparent; color: var(--muted); font-size: 11px; padding: 4px 6px;
+  }
+  .cell:hover .cx { opacity: 1; }
+  .cell .cx:hover { color: var(--red); border: 0; }
+
   /* ---------- Controls row ---------- */
   .controls {
     display: flex; gap: 8px; padding: 12px 18px; border-bottom: 1px solid var(--line);
@@ -822,7 +854,7 @@ if (!state || !Array.isArray(state.lists) || !state.lists.length) {
 }
 
 // per-list view settings (not persisted)
-const view = { search: '', sort: 'added', filter: 'all', bracket: '' };
+const view = { search: '', sort: 'added', filter: 'all', bracket: '', layout: 'list' };
 
 function save() { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
@@ -865,6 +897,7 @@ function renderNav() {
       const target = state.lists.filter(function (l) { return l.id === b.dataset.id; })[0];
       view.search = ''; view.filter = 'all'; view.bracket = '';
       view.sort = (target && target.brackets) ? 'bracket' : 'added';
+      view.layout = (target && target.brackets) ? 'columns' : 'list';
       save(); render();
     });
   });
@@ -954,7 +987,13 @@ function renderPanel() {
         '<button data-f="watched">Seen</button>' +
         '<button data-f="towatch">To Watch</button>' +
       '</div>' +
-      '<select id="sortSel">' +
+      (hasBrackets
+        ? '<div class="seg" id="layoutSeg">' +
+          '<button data-l="columns"' + (view.layout === 'columns' ? ' class="on"' : '') + '>⊞ Columns</button>' +
+          '<button data-l="list"' + (view.layout === 'list' ? ' class="on"' : '') + '>☰ List</button>' +
+          '</div>'
+        : '') +
+      '<select id="sortSel"' + (hasBrackets && view.layout === 'columns' ? ' style="display:none"' : '') + '>' +
         (hasBrackets ? '<option value="bracket">Age order</option>' : '') +
         '<option value="added">Recently added</option>' +
         '<option value="az">A–Z</option>' +
@@ -992,6 +1031,16 @@ function renderPanel() {
   const sel = document.getElementById('sortSel');
   sel.value = view.sort;
   sel.addEventListener('change', function () { view.sort = sel.value; refreshItemsOnly(list); });
+
+  const lseg = document.getElementById('layoutSeg');
+  if (lseg) {
+    lseg.querySelectorAll('button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        view.layout = b.dataset.l;
+        renderPanel();
+      });
+    });
+  }
 
   const pills = document.getElementById('bracketPills');
   if (pills) {
@@ -1033,6 +1082,7 @@ function itemsHTML(list, items) {
         : 'This list is empty — add your first ' + (list.type === 'tv' ? 'show' : 'movie') + ' above.') +
       '</div>';
   }
+  if (list.brackets && view.layout === 'columns') return columnsHTML(list, items);
   const grouped = list.brackets && view.sort === 'bracket' && !view.bracket;
   if (grouped) {
     let html = '<ul class="items">';
@@ -1051,13 +1101,63 @@ function itemsHTML(list, items) {
   return '<ul class="items">' + items.map(function (it) { return itemRow(it, chips); }).join('') + '</ul>';
 }
 
+function columnsHTML(list, items) {
+  const groups = {};
+  list.brackets.forEach(function (b) { groups[b] = []; });
+  const other = [];
+  items.forEach(function (it) {
+    if (it.bracket && groups[it.bracket]) groups[it.bracket].push(it);
+    else other.push(it);
+  });
+  // sheet order within each column
+  list.brackets.forEach(function (b) {
+    groups[b].sort(function (a, c) { return (a.added || 0) - (c.added || 0); });
+  });
+  const cols = list.brackets.filter(function (b) { return !view.bracket || view.bracket === b; });
+  let html = '<div class="col-grid-wrap"><div class="col-grid">';
+  cols.forEach(function (b) {
+    html += '<div class="col">' +
+      '<div class="col-head">Ages ' + esc(b) + '<span class="cnt">' + groups[b].length + '</span></div>' +
+      '<div class="col-body">' +
+      (groups[b].length ? groups[b].map(cellHTML).join('') : '<div class="cell blank">—</div>') +
+      '</div></div>';
+  });
+  if (other.length && !view.bracket) {
+    html += '<div class="col">' +
+      '<div class="col-head">Unsorted<span class="cnt">' + other.length + '</span></div>' +
+      '<div class="col-body">' + other.map(cellHTML).join('') + '</div></div>';
+  }
+  return html + '</div></div>';
+}
+
+function cellHTML(it) {
+  return '<div class="cell" data-id="' + it.id + '" title="Click to edit">' +
+    '<div class="ct">' + esc(it.title) + (it.year ? ' <span class="cy">' + it.year + '</span>' : '') + '</div>' +
+    (it.rating ? '<div class="cs">' + starsText(it.rating) + '</div>' : '') +
+    '<button class="cx" title="Remove">✕</button></div>';
+}
+
 function refreshItemsOnly(list) {
-  const old = document.querySelector('.items, .empty-state');
+  const old = document.querySelector('.col-grid-wrap, .items, .empty-state');
   if (old) old.outerHTML = itemsHTML(list, visibleItems(list));
   wireItemRows(list);
 }
 
 function wireItemRows(list) {
+  document.querySelectorAll('.cell[data-id]').forEach(function (cell) {
+    const it = list.items.find(function (x) { return x.id === cell.dataset.id; });
+    if (!it) return;
+    cell.addEventListener('click', function (ev) {
+      if (ev.target.classList.contains('cx')) return;
+      openItemModal(list, it);
+    });
+    cell.querySelector('.cx').addEventListener('click', function () {
+      if (!confirm('Remove “' + it.title + '” from ' + list.name + '?')) return;
+      list.items = list.items.filter(function (x) { return x.id !== it.id; });
+      save(); render();
+      toast('Removed “' + it.title + '”');
+    });
+  });
   document.querySelectorAll('.item').forEach(function (row) {
     const it = list.items.find(function (x) { return x.id === row.dataset.id; });
     if (!it) return;
@@ -1323,7 +1423,7 @@ document.getElementById('importFile').addEventListener('change', function (ev) {
    Boot
    ============================================================ */
 function render() { renderNav(); renderPanel(); }
-if (activeList().brackets) view.sort = 'bracket';
+if (activeList().brackets) { view.sort = 'bracket'; view.layout = 'columns'; }
 render();
 </script>
 </body>
