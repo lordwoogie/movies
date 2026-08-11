@@ -111,10 +111,23 @@
 
   /* ---------- Sidebar ---------- */
   .sidebar { position: sticky; top: 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .side-top { display: flex; align-items: center; justify-content: space-between; }
   .side-label {
     font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px;
     text-transform: uppercase; color: var(--muted); padding: 6px 4px 0;
   }
+  #collapseBtn {
+    padding: 4px 10px; font-size: 14px; color: var(--muted); background: transparent;
+    border-radius: 8px; line-height: 1;
+  }
+  #collapseBtn:hover { color: var(--gold); }
+  .wrap.collapsed { grid-template-columns: 62px 1fr; }
+  .wrap.collapsed .side-label { display: none; }
+  .wrap.collapsed .side-top { justify-content: center; }
+  .wrap.collapsed .list-btn { justify-content: center; padding: 11px 6px; }
+  .wrap.collapsed .list-btn .name,
+  .wrap.collapsed .list-btn .count,
+  .wrap.collapsed .nl-label { display: none; }
   .list-nav { display: flex; flex-direction: column; gap: 6px; }
   .list-btn {
     display: flex; align-items: center; gap: 10px; text-align: left;
@@ -217,6 +230,27 @@
   .cell:hover .cx { opacity: 1; }
   .cell .cx:hover { color: var(--red); border: 0; }
 
+  /* ---------- Norah / Owen seen toggles ---------- */
+  .kid-toggles { display: flex; gap: 5px; align-items: center; flex: none; }
+  .kid {
+    width: 26px; height: 26px; border-radius: 50%; padding: 0;
+    display: grid; place-items: center;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600;
+    color: var(--muted); background: transparent; border: 1.5px solid var(--line);
+  }
+  .kid.kid-n.on { background: #ff8ac2; border-color: #ff8ac2; color: #4a1030; }
+  .kid.kid-o.on { background: var(--green); border-color: var(--green); color: #073a1c; }
+  .kid.kid-n:hover { border-color: #ff8ac2; }
+  .kid.kid-o:hover { border-color: var(--green); }
+  .km-n b { color: #ff8ac2; }
+  .km-o b { color: var(--green); }
+  .cell .kid-toggles { position: absolute; right: 6px; bottom: 6px; }
+  .cell .kid { width: 22px; height: 22px; font-size: 10.5px; }
+  .cell { padding-right: 62px; }
+  .modal-kids { gap: 8px; }
+  .modal-kids .kid { width: 32px; height: 32px; font-size: 14px; }
+  .modal-kids .kid-name { color: var(--muted); font-size: 13px; margin-right: 10px; }
+
   /* ---------- Controls row ---------- */
   .controls {
     display: flex; gap: 8px; padding: 12px 18px; border-bottom: 1px solid var(--line);
@@ -313,6 +347,11 @@
     .add-row input[type=number] { max-width: 120px; }
     .item .stars { min-width: 0; }
     .controls input[type=text] { max-width: none; flex: 1; }
+    .seg { max-width: 100%; overflow-x: auto; }
+    #collapseBtn { display: none; }
+    .wrap.collapsed { grid-template-columns: 1fr; }
+    .wrap.collapsed .list-btn .name, .wrap.collapsed .list-btn .count,
+    .wrap.collapsed .nl-label, .wrap.collapsed .side-label { display: initial; }
   }
 </style>
 </head>
@@ -332,9 +371,12 @@
 
 <div class="wrap">
   <aside class="sidebar">
-    <div class="side-label">Your Lists</div>
+    <div class="side-top">
+      <div class="side-label">Your Lists</div>
+      <button id="collapseBtn" title="Collapse menu">«</button>
+    </div>
     <nav class="list-nav" id="listNav"></nav>
-    <button class="list-btn new-list-btn" id="newListBtn">＋ &nbsp;New List</button>
+    <button class="list-btn new-list-btn" id="newListBtn">＋<span class="nl-label">&nbsp; New List</span></button>
   </aside>
 
   <main class="main">
@@ -388,6 +430,10 @@
     <div class="field" id="itemBracketField" style="display:none">
       <label>Age bracket</label>
       <select id="itemBracketInput"></select>
+    </div>
+    <div class="field" id="itemKidsField" style="display:none">
+      <label>Seen by</label>
+      <div class="kid-toggles modal-kids" id="itemKidsInput"></div>
     </div>
     <div class="field">
       <label>Notes</label>
@@ -857,6 +903,15 @@ if (!state || !Array.isArray(state.lists) || !state.lists.length) {
 const view = { search: '', sort: 'added', filter: 'all', bracket: '', layout: 'list' };
 
 function save() { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+
+// UI prefs (separate from list data)
+const UI_KEY = 'vault_ui_v1';
+let ui;
+try { ui = JSON.parse(localStorage.getItem(UI_KEY)) || {}; } catch (e) { ui = {}; }
+function saveUI() { localStorage.setItem(UI_KEY, JSON.stringify(ui)); }
+
+const KIDS = [{ key: 'n', name: 'Norah' }, { key: 'o', name: 'Owen' }];
+function seenBy(it, k) { return !!(it.seenBy && it.seenBy[k]); }
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 function activeList() {
   return state.lists.find(function (l) { return l.id === state.activeId; }) || state.lists[0];
@@ -914,8 +969,15 @@ function visibleItems(list) {
       return (it.title + ' ' + (it.notes || '') + ' ' + (it.year || '')).toLowerCase().includes(q);
     });
   }
-  if (view.filter === 'watched') items = items.filter(function (it) { return it.watched; });
-  if (view.filter === 'towatch') items = items.filter(function (it) { return !it.watched; });
+  if (list.brackets) {
+    if (view.filter === 'n') items = items.filter(function (it) { return seenBy(it, 'n'); });
+    if (view.filter === 'o') items = items.filter(function (it) { return seenBy(it, 'o'); });
+    if (view.filter === 'both') items = items.filter(function (it) { return seenBy(it, 'n') && seenBy(it, 'o'); });
+    if (view.filter === 'none') items = items.filter(function (it) { return !seenBy(it, 'n') && !seenBy(it, 'o'); });
+  } else {
+    if (view.filter === 'watched') items = items.filter(function (it) { return it.watched; });
+    if (view.filter === 'towatch') items = items.filter(function (it) { return !it.watched; });
+  }
   if (view.bracket) items = items.filter(function (it) { return it.bracket === view.bracket; });
   const s = view.sort;
   if (s === 'az') items.sort(function (a, b) { return a.title.localeCompare(b.title); });
@@ -943,6 +1005,12 @@ function renderPanel() {
     : null;
   const unwatched = list.items.filter(function (i) { return !i.watched; }).length;
   const typeLabel = list.type === 'tv' ? 'shows' : list.type === 'mixed' ? 'titles' : 'movies';
+  const kidMeta = list.brackets
+    ? KIDS.map(function (k) {
+        const c = list.items.filter(function (i) { return seenBy(i, k.key); }).length;
+        return ' &nbsp;·&nbsp; <span class="km km-' + k.key + '">' + k.name + ' <b>' + c + '</b></span>';
+      }).join('')
+    : '';
 
   const items = visibleItems(list);
   const hasBrackets = !!list.brackets;
@@ -959,7 +1027,8 @@ function renderPanel() {
       '</div>' +
       '<div class="list-meta"><b>' + list.items.length + '</b> ' + typeLabel +
         (avg ? ' &nbsp;·&nbsp; avg <b>' + avg + '★</b>' : '') +
-        (unwatched ? ' &nbsp;·&nbsp; <b>' + unwatched + '</b> to watch' : '') +
+        (list.brackets ? kidMeta + ' seen'
+          : (unwatched ? ' &nbsp;·&nbsp; <b>' + unwatched + '</b> to watch' : '')) +
       '</div>' +
     '</div>' +
     '<form class="add-row' + (hasBrackets ? ' has-bracket' : '') + '" id="addForm">' +
@@ -982,11 +1051,19 @@ function renderPanel() {
       : '') +
     '<div class="controls">' +
       '<input type="text" id="searchBox" placeholder="Search this list…" value="' + esc(view.search) + '">' +
-      '<div class="seg" id="filterSeg">' +
-        '<button data-f="all">All</button>' +
-        '<button data-f="watched">Seen</button>' +
-        '<button data-f="towatch">To Watch</button>' +
-      '</div>' +
+      (hasBrackets
+        ? '<div class="seg" id="filterSeg">' +
+          '<button data-f="all">All</button>' +
+          '<button data-f="n">Norah ✓</button>' +
+          '<button data-f="o">Owen ✓</button>' +
+          '<button data-f="both">Both</button>' +
+          '<button data-f="none">Unseen</button>' +
+          '</div>'
+        : '<div class="seg" id="filterSeg">' +
+          '<button data-f="all">All</button>' +
+          '<button data-f="watched">Seen</button>' +
+          '<button data-f="towatch">To Watch</button>' +
+          '</div>') +
       (hasBrackets
         ? '<div class="seg" id="layoutSeg">' +
           '<button data-l="columns"' + (view.layout === 'columns' ? ' class="on"' : '') + '>⊞ Columns</button>' +
@@ -1058,10 +1135,21 @@ function renderPanel() {
   wireItemRows(list);
 }
 
-function itemRow(it, showChip) {
+function kidTogglesHTML(it) {
+  return '<div class="kid-toggles">' + KIDS.map(function (k) {
+    const on = seenBy(it, k.key);
+    return '<button class="kid kid-' + k.key + (on ? ' on' : '') + '" data-kid="' + k.key + '"' +
+      ' title="' + k.name + (on ? ' has seen this — click to uncheck' : ' hasn’t seen this — click to check off') + '">' +
+      k.name.charAt(0) + '</button>';
+  }).join('') + '</div>';
+}
+
+function itemRow(it, showChip, kids) {
   return '<li class="item' + (it.watched ? ' watched' : '') + '" data-id="' + it.id + '">' +
-    '<button class="watch-toggle" title="' + (it.watched ? 'Watched — click to move to To Watch' : 'Not watched yet — click to mark seen') + '">' +
-      (it.watched ? '✓' : '◌') + '</button>' +
+    (kids
+      ? kidTogglesHTML(it)
+      : '<button class="watch-toggle" title="' + (it.watched ? 'Watched — click to move to To Watch' : 'Not watched yet — click to mark seen') + '">' +
+        (it.watched ? '✓' : '◌') + '</button>') +
     '<div class="body">' +
       '<div class="t">' + esc(it.title) + (it.year ? '<span class="yr">' + it.year + '</span>' : '') +
         (showChip && it.bracket ? '<span class="bracket-chip">' + esc(it.bracket) + '</span>' : '') + '</div>' +
@@ -1093,12 +1181,12 @@ function itemsHTML(list, items) {
         cur = key;
         html += '<li class="bracket-head">' + (it.bracket ? 'Ages ' + esc(it.bracket) : 'Unsorted') + '</li>';
       }
-      html += itemRow(it, false);
+      html += itemRow(it, false, true);
     });
     return html + '</ul>';
   }
   const chips = !!list.brackets;
-  return '<ul class="items">' + items.map(function (it) { return itemRow(it, chips); }).join('') + '</ul>';
+  return '<ul class="items">' + items.map(function (it) { return itemRow(it, chips, chips); }).join('') + '</ul>';
 }
 
 function columnsHTML(list, items) {
@@ -1134,6 +1222,7 @@ function cellHTML(it) {
   return '<div class="cell" data-id="' + it.id + '" title="Click to edit">' +
     '<div class="ct">' + esc(it.title) + (it.year ? ' <span class="cy">' + it.year + '</span>' : '') + '</div>' +
     (it.rating ? '<div class="cs">' + starsText(it.rating) + '</div>' : '') +
+    kidTogglesHTML(it) +
     '<button class="cx" title="Remove">✕</button></div>';
 }
 
@@ -1143,12 +1232,43 @@ function refreshItemsOnly(list) {
   wireItemRows(list);
 }
 
+function toggleKid(it, key, btn) {
+  if (!it.seenBy) it.seenBy = {};
+  it.seenBy[key] = !it.seenBy[key];
+  save();
+  // update every toggle for this item in place; only refilter when a kid filter is active
+  if (btn) btn.classList.toggle('on', it.seenBy[key]);
+  document.querySelectorAll('[data-id="' + it.id + '"] .kid[data-kid="' + key + '"]').forEach(function (b) {
+    b.classList.toggle('on', it.seenBy[key]);
+  });
+  const list = activeList();
+  const counter = document.querySelector('.km-' + key + ' b');
+  if (counter && list.brackets) {
+    counter.textContent = list.items.filter(function (i) { return seenBy(i, key); }).length;
+  }
+  if (view.filter !== 'all') refreshItemsOnly(list);
+}
+
+function wireKidToggles(list, root) {
+  root.querySelectorAll('.kid[data-kid]').forEach(function (btn) {
+    const holder = btn.closest('[data-id]');
+    if (!holder) return; // modal toggles are wired separately
+    const it = list.items.find(function (x) { return x.id === holder.dataset.id; });
+    if (!it) return;
+    btn.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      toggleKid(it, btn.dataset.kid, btn);
+    });
+  });
+}
+
 function wireItemRows(list) {
+  wireKidToggles(list, document);
   document.querySelectorAll('.cell[data-id]').forEach(function (cell) {
     const it = list.items.find(function (x) { return x.id === cell.dataset.id; });
     if (!it) return;
     cell.addEventListener('click', function (ev) {
-      if (ev.target.classList.contains('cx')) return;
+      if (ev.target.classList.contains('cx') || ev.target.classList.contains('kid')) return;
       openItemModal(list, it);
     });
     cell.querySelector('.cx').addEventListener('click', function () {
@@ -1161,7 +1281,8 @@ function wireItemRows(list) {
   document.querySelectorAll('.item').forEach(function (row) {
     const it = list.items.find(function (x) { return x.id === row.dataset.id; });
     if (!it) return;
-    row.querySelector('.watch-toggle').addEventListener('click', function () {
+    const wt = row.querySelector('.watch-toggle');
+    if (wt) wt.addEventListener('click', function () {
       it.watched = !it.watched;
       save(); renderNav(); refreshItemsOnly(list);
       toast(it.watched ? '“' + it.title + '” marked as seen' : '“' + it.title + '” moved to To Watch');
@@ -1291,9 +1412,11 @@ function deleteList(list) {
 function copyList(list) {
   const lines = [list.emoji + ' ' + list.name.toUpperCase()];
   list.items.forEach(function (it) {
+    const seen = KIDS.filter(function (k) { return seenBy(it, k.key); }).map(function (k) { return k.name; });
     lines.push('• ' + it.title + (it.year ? ' (' + it.year + ')' : '') +
       (it.bracket ? ' [ages ' + it.bracket + ']' : '') +
-      (it.rating ? ' — ' + it.rating + '★' : '') + (it.watched ? '' : '  [to watch]'));
+      (it.rating ? ' — ' + it.rating + '★' : '') +
+      (list.brackets ? (seen.length ? '  [seen: ' + seen.join(' + ') + ']' : '') : (it.watched ? '' : '  [to watch]')));
   });
   const text = lines.join('\n');
   if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -1339,14 +1462,25 @@ function openItemModal(list, it) {
   document.getElementById('itemYearInput').value = it.year || '';
   document.getElementById('itemNotesInput').value = it.notes || '';
   const bField = document.getElementById('itemBracketField');
+  const kField = document.getElementById('itemKidsField');
   if (list.brackets) {
     const bSel = document.getElementById('itemBracketInput');
     bSel.innerHTML = '<option value="">—</option>' + list.brackets.map(function (b) {
       return '<option value="' + b + '"' + (it.bracket === b ? ' selected' : '') + '>' + b + '</option>';
     }).join('');
     bField.style.display = '';
+    const kBox = document.getElementById('itemKidsInput');
+    kBox.innerHTML = KIDS.map(function (k) {
+      return '<button type="button" class="kid kid-' + k.key + (seenBy(it, k.key) ? ' on' : '') + '" data-kid="' + k.key + '">' +
+        k.name.charAt(0) + '</button><span class="kid-name">' + k.name + '</span>';
+    }).join('');
+    kBox.querySelectorAll('.kid').forEach(function (btn) {
+      btn.addEventListener('click', function () { toggleKid(it, btn.dataset.kid, btn); });
+    });
+    kField.style.display = '';
   } else {
     bField.style.display = 'none';
+    kField.style.display = 'none';
   }
   modalRating = it.rating || null;
   renderStarPicker();
@@ -1424,6 +1558,21 @@ document.getElementById('importFile').addEventListener('change', function (ev) {
    ============================================================ */
 function render() { renderNav(); renderPanel(); }
 if (activeList().brackets) { view.sort = 'bracket'; view.layout = 'columns'; }
+
+// collapsible sidebar
+const wrapEl = document.querySelector('.wrap');
+const collapseBtn = document.getElementById('collapseBtn');
+function applyCollapse() {
+  wrapEl.classList.toggle('collapsed', !!ui.sideCollapsed);
+  collapseBtn.textContent = ui.sideCollapsed ? '»' : '«';
+  collapseBtn.title = ui.sideCollapsed ? 'Expand menu' : 'Collapse menu';
+}
+collapseBtn.addEventListener('click', function () {
+  ui.sideCollapsed = !ui.sideCollapsed;
+  saveUI(); applyCollapse();
+});
+applyCollapse();
+
 render();
 </script>
 </body>
