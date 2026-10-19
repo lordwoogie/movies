@@ -793,7 +793,7 @@ const RANDOMS_DATA = [
 
 function seedState() {
   return {
-    version: 2,
+    version: 3,
     activeId: 'byage',
     lists: [
       {
@@ -901,6 +901,39 @@ function seedState() {
           ['Prince of Darkness', 1987, null, null, false], ['The Devils', 1971, null, null, false],
           ['Onibaba', 1964, null, null, false]
         ])
+      },
+      {
+        id: 'era5070', name: '1950–70 Picks', emoji: '🎥', type: 'movies',
+        items: seedItems([
+          ["North by Northwest", 1959, null, "Hitchcock · the propulsive one — Raiders' blueprint", false],
+          ["Once Upon a Time in the West", 1968, null, "Leone · operatic; you gave GBU 4", false],
+          ["La Jetée", 1962, null, "Chris Marker · 28 min of stills — ancestor of Arrival", false],
+          ["Seconds", 1966, null, "Frankenheimer · a man buys a second life; best fit here", false],
+          ["The Swimmer", 1968, null, "Frank Perry · Lancaster swims home through his own life", false],
+          ["The Hustler", 1961, null, "Rossen · Newman; about talent not being enough", false],
+          ["La Notte", 1961, null, "Antonioni · one night, one marriage ending", false],
+          ["Point Blank", 1967, null, "Boorman · Lee Marvin; decades ahead of your tier list", false],
+          ["The Wild Bunch", 1969, null, "Peckinpah · aging outlaws; grandfather of your S-tier", false],
+          ["Army of Shadows", 1969, null, "Melville · Resistance as grim proceduralism", false],
+          ["Sweet Smell of Success", 1957, null, "Mackendrick · most venomous dialogue of the decade", false],
+          ["Ace in the Hole", 1951, null, "Wilder with the charm stripped out", false],
+          ["Planet of the Apes", 1968, null, "Schaffner · Serling script, meaner than its reputation", false],
+          ["Invasion of the Body Snatchers", 1956, null, "Don Siegel · lean paranoia thriller", false],
+          ["Forbidden Planet", 1956, null, "Wilcox · design bridge from pulp sci-fi to 2001", false],
+          ["Winter Light", 1963, null, "Bergman · middle panel of the Through a Glass Darkly trilogy", false],
+          ["Hour of the Wolf", 1968, null, "Bergman doing outright horror", false],
+          ["Yojimbo", 1961, null, "Kurosawa · remade as A Fistful of Dollars", false],
+          ["The Hidden Fortress", 1958, null, "Kurosawa · the peasants Lucas turned into the droids", false],
+          ["Throne of Blood", 1957, null, "Kurosawa · Macbeth as Noh horror", false],
+          ["Night of the Living Dead", 1968, null, "Romero · the text Shaun of the Dead riffs on", false],
+          ["Eyes Without a Face", 1960, null, "Franju · poetic, and still upsetting", false],
+          ["The Haunting", 1963, null, "Robert Wise · best haunted house film; shows you nothing", false],
+          ["Les Diaboliques", 1955, null, "Clouzot · the ending Hitchcock wished he had filmed", false],
+          ["The Wages of Fear", 1953, null, "Clouzot · nitroglycerin trucks, Sicario-grade dread", false],
+          ["The Night of the Hunter", 1955, null, "Laughton · Mitchum and the LOVE/HATE knuckles", false],
+          ["Lawrence of Arabia", 1962, null, "David Lean · 3h47m, biggest screen you have", false],
+          ["The Battle of Algiers", 1966, null, "Pontecorvo · shot like documentary footage", false]
+        ])
       }
     ]
   };
@@ -916,7 +949,8 @@ try {
 if (!state || !Array.isArray(state.lists) || !state.lists.length) {
   state = seedState();
   save();
-} else if (!state.version) {
+} else {
+  if (!state.version) {
   // v1 -> v2: fold in the spreadsheet lists without touching user edits
   (function migrate() {
     const seeds = seedState();
@@ -940,6 +974,18 @@ if (!state || !Array.isArray(state.lists) || !state.lists.length) {
     state.version = 2;
     save();
   })();
+  }
+  if (state.version < 3) {
+    // v2 -> v3: add the 1950-70 recommendations list, leaving everything else alone
+    (function migrateV3() {
+      if (!state.lists.some(function (l) { return l.id === 'era5070'; })) {
+        const seeds = seedState();
+        state.lists.push(seeds.lists.filter(function (l) { return l.id === 'era5070'; })[0]);
+      }
+      state.version = 3;
+      save();
+    })();
+  }
 }
 
 // per-list view settings (not persisted)
