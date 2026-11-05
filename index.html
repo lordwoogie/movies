@@ -202,6 +202,11 @@
   .hint { color: var(--muted); font-size: 13px; line-height: 1.55; margin-bottom: 14px; }
   .hint b { color: var(--gold); }
 
+  .sync-banner {
+    padding: 13px 18px; border-bottom: 1px solid var(--line); background: var(--panel-2);
+    color: var(--muted); font-size: 13px;
+  }
+
   /* ---------- Age bracket pills ---------- */
   .bracket-pills { display: flex; gap: 6px; flex-wrap: wrap; padding: 12px 18px 0; }
   .bracket-pills button {
@@ -1123,7 +1128,10 @@ function renderPanel() {
           : (unwatched ? ' &nbsp;·&nbsp; <b>' + unwatched + '</b> to watch' : '')) +
       '</div>' +
     '</div>' +
-    '<form class="add-row' + (hasBrackets ? ' has-bracket' : '') + '" id="addForm">' +
+    (list.synced
+      ? '<div class="sync-banner">📓 Mirrors your Letterboxd diary, refreshed daily' +
+        (state.lbUpdated ? ' · last new watch synced ' + fmtDate(state.lbUpdated) : '') + '</div>'
+      : '<form class="add-row' + (hasBrackets ? ' has-bracket' : '') + '" id="addForm">' +
       '<div class="combo">' +
         '<input type="text" id="addTitle" placeholder="Add a ' + (list.type === 'tv' ? 'show' : 'movie') +
           (ui.tmdbToken ? ' — start typing to search TMDB' : ' — e.g. Heat or Heat (1995)') + '" autocomplete="off">' +
@@ -1137,7 +1145,7 @@ function renderPanel() {
           }).join('') + '</select>'
         : '') +
       '<button class="primary" type="submit">＋ Add</button>' +
-    '</form>' +
+    '</form>') +
     (hasBrackets
       ? '<div class="bracket-pills" id="bracketPills">' +
         '<button data-b="" class="' + (!view.bracket ? 'on' : '') + '">All Ages</button>' +
@@ -1184,7 +1192,8 @@ function renderPanel() {
   document.getElementById('copyListBtn').addEventListener('click', function () { copyList(list); });
 
   // add form
-  document.getElementById('addForm').addEventListener('submit', function (ev) {
+  const addFormEl = document.getElementById('addForm');
+  if (addFormEl) addFormEl.addEventListener('submit', function (ev) {
     ev.preventDefault();
     addItem(list);
   });
@@ -1244,6 +1253,10 @@ function kidTogglesHTML(it) {
 }
 
 function itemRow(it, showChip, kids) {
+  const sub = [
+    it.watchedOn ? 'Watched ' + fmtDate(it.watchedOn) + (it.rewatch ? ' · rewatch' : '') : '',
+    it.notes || ''
+  ].filter(Boolean).join(' · ');
   return '<li class="item' + (it.watched ? ' watched' : '') + '" data-id="' + it.id + '">' +
     (kids
       ? kidTogglesHTML(it)
@@ -1252,7 +1265,7 @@ function itemRow(it, showChip, kids) {
     '<div class="body">' +
       '<div class="t">' + esc(it.title) + (it.year ? '<span class="yr">' + it.year + '</span>' : '') +
         (showChip && it.bracket ? '<span class="bracket-chip">' + esc(it.bracket) + '</span>' : '') + '</div>' +
-      (it.notes ? '<div class="notes">' + esc(it.notes) + '</div>' : '') +
+      (sub ? '<div class="notes">' + esc(sub) + '</div>' : '') +
     '</div>' +
     '<div class="stars' + (it.rating ? '' : ' empty') + '" title="' + (it.rating ? 'My rating: ' + it.rating + '/5' : 'Not rated') + '">' + starsText(it.rating) + '</div>' +
     '<div class="row-actions">' +
@@ -1932,6 +1945,95 @@ document.getElementById('importFile').addEventListener('change', function (ev) {
    Boot
    ============================================================ */
 function render() { renderNav(); renderPanel(); }
+
+/* ============================================================
+   Letterboxd diary sync
+   letterboxd.json is refreshed daily by .github/workflows/letterboxd.yml
+   ============================================================ */
+function normTitle(t) {
+  return String(t || '').toLowerCase().replace(/^the\s+/, '').replace(/[^a-z0-9]/g, '');
+}
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso.length === 10 ? iso + 'T12:00:00' : iso);
+  return isNaN(d) ? iso : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function applyLetterboxd(data) {
+  const entries = (data.entries || []).filter(function (e) { return e && e.title; });
+  if (!entries.length) return null;
+
+  // Mirror list, newest first. Existing rows are reused so TMDB details survive a resync.
+  let diary = state.lists.filter(function (l) { return l.id === 'lbdiary'; })[0];
+  const isNew = !diary;
+  if (isNew) {
+    diary = { id: 'lbdiary', name: 'Letterboxd Diary', emoji: '📓', type: 'movies', synced: true, items: [] };
+    const at = state.lists.map(function (l) { return l.id; }).indexOf('byage');
+    state.lists.splice(at + 1, 0, diary);
+  }
+  function key(t, y, w) { return normTitle(t) + '|' + (y || '') + '|' + (w || ''); }
+  const prev = {};
+  diary.items.forEach(function (it) { prev[key(it.title, it.year, it.watchedOn)] = it; });
+  let fresh = 0;
+  const now = Date.now();
+  diary.items = entries.map(function (e, i) {
+    let it = prev[key(e.title, e.year, e.watched)];
+    if (!it) { it = { id: uid(), notes: '' }; fresh++; }
+    it.title = e.title;
+    it.year = e.year || null;
+    it.rating = e.rating || null;
+    it.watched = true;
+    it.watchedOn = e.watched || null;
+    it.rewatch = !!e.rewatch;
+    it.lbUri = e.uri || null;
+    it.added = now - i;
+    return it;
+  });
+
+  // Push Letterboxd ratings onto the same film in every other list.
+  // Entries arrive newest first, so the first match per film is the current rating.
+  const byTitle = {};
+  entries.forEach(function (e) {
+    const k = normTitle(e.title);
+    (byTitle[k] = byTitle[k] || []).push(e);
+  });
+  let rated = 0, ticked = 0;
+  state.lists.forEach(function (l) {
+    if (l.synced) return;
+    l.items.forEach(function (it) {
+      const cands = byTitle[normTitle(it.title)];
+      if (!cands) return;
+      const e = cands.filter(function (c) { return !it.year || !c.year || c.year === it.year; })[0];
+      if (!e) return;
+      if (e.rating && it.rating !== e.rating) { it.rating = e.rating; rated++; }
+      // Age lists track the kids through their own toggles, so only plain lists get ticked.
+      if (!l.brackets && !it.watched) { it.watched = true; ticked++; }
+    });
+  });
+  return { isNew: isNew, total: entries.length, fresh: isNew ? entries.length : fresh, rated: rated, ticked: ticked };
+}
+
+function syncLetterboxd() {
+  if (!window.fetch) return;
+  fetch('letterboxd.json', { cache: 'no-cache' })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (data) {
+      if (!data || !data.updated || data.updated === state.lbUpdated) return;
+      const res = applyLetterboxd(data);
+      if (!res) return;
+      state.lbUpdated = data.updated;
+      save();
+      render();
+      const bits = [];
+      if (res.isNew) bits.push('Letterboxd diary connected — ' + res.total + ' watches');
+      else if (res.fresh) bits.push(res.fresh + ' new watch' + (res.fresh === 1 ? '' : 'es') + ' from Letterboxd');
+      if (res.rated) bits.push(res.rated + ' rating' + (res.rated === 1 ? '' : 's') + ' updated');
+      if (res.ticked) bits.push(res.ticked + ' marked seen');
+      if (bits.length) toast(bits.join(' · '));
+    })
+    .catch(function () { /* offline, or the first sync hasn't run yet */ });
+}
 if (activeList().brackets) { view.sort = 'bracket'; view.layout = 'columns'; }
 
 // collapsible sidebar
@@ -1949,6 +2051,7 @@ collapseBtn.addEventListener('click', function () {
 applyCollapse();
 
 render();
+syncLetterboxd();
 </script>
 </body>
 </html>
