@@ -1,0 +1,16 @@
+{
+  "region": "US",
+  "services": {
+    "Disney+": ["Disney Plus"],
+    "Hulu": ["Hulu"],
+    "HBO Max": ["HBO Max", "Max"],
+    "Prime Video": ["Amazon Prime Video", "Amazon Prime Video with Ads"],
+    "Kanopy": ["Kanopy"]
+  },
+  "kids": [
+    { "name": "Norah", "born": 2023 },
+    { "name": "Owen", "born": 2026 }
+  ],
+  "kidsMinAge": 2,
+  "keepWeeks": 6
+}

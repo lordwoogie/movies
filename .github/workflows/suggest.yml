@@ -1,0 +1,74 @@
+name: Weekly picks
+
+on:
+  schedule:
+    - cron: '17 11 * * 5'   # Friday mornings, US time
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/suggest.yml'
+      - 'scripts/suggest.py'
+      - 'data/suggest_config.json'
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: weekly-picks
+  cancel-in-progress: false
+
+jobs:
+  suggest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for API keys
+        id: keys
+        env:
+          TMDB_TOKEN: ${{ secrets.TMDB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -n "$TMDB_TOKEN" ] && [ -n "$ANTHROPIC_API_KEY" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Add the TMDB_TOKEN and ANTHROPIC_API_KEY repository secrets to turn on weekly picks."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install Anthropic SDK
+        if: steps.keys.outputs.ready == 'true'
+        run: pip install 'anthropic>=2.5,<3'
+
+      - name: Choose this week's films
+        if: steps.keys.outputs.ready == 'true'
+        env:
+          TMDB_TOKEN: ${{ secrets.TMDB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python3 scripts/suggest.py
+
+      - name: Commit the picks
+        id: commit
+        if: steps.keys.outputs.ready == 'true'
+        run: |
+          git add suggestions.json
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Weekly picks"
+          git pull --rebase origin main
+          git push origin HEAD:main
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      # Pushes made with this workflow's token don't start other workflows,
+      # so ask the Pages workflow to redeploy explicitly.
+      - name: Redeploy site
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref main
