@@ -1,0 +1,456 @@
+{
+ "updated": "2026-11-05T17:11:47Z",
+ "count": 50,
+ "entries": [
+  {
+   "title": "Buddy",
+   "year": 2026,
+   "rating": 3.5,
+   "watched": "2026-10-31",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/buddy-2026/",
+   "tmdbId": "1514026"
+  },
+  {
+   "title": "You Can See Everything",
+   "year": 2026,
+   "rating": 5.0,
+   "watched": "2026-10-27",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/you-can-see-everything/",
+   "tmdbId": "1765072"
+  },
+  {
+   "title": "Friday the 13th",
+   "year": 1980,
+   "rating": 3.0,
+   "watched": "2026-10-14",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/friday-the-13th/",
+   "tmdbId": "4488"
+  },
+  {
+   "title": "Resident Evil",
+   "year": 2026,
+   "rating": 4.0,
+   "watched": "2026-09-23",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/resident-evil-2026/",
+   "tmdbId": "1423191"
+  },
+  {
+   "title": "Toy Story 5",
+   "year": 2026,
+   "rating": 3.5,
+   "watched": "2026-09-20",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/toy-story-5/",
+   "tmdbId": "1084244"
+  },
+  {
+   "title": "Teenage Sex and Death at Camp Miasma",
+   "year": 2026,
+   "rating": 4.0,
+   "watched": "2026-09-19",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/teenage-sex-and-death-at-camp-miasma/",
+   "tmdbId": "1240889"
+  },
+  {
+   "title": "Air",
+   "year": 2023,
+   "rating": 3.5,
+   "watched": "2026-09-16",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/air-2023/",
+   "tmdbId": "964980"
+  },
+  {
+   "title": "Barbie",
+   "year": 2023,
+   "rating": 4.0,
+   "watched": "2026-09-06",
+   "rewatch": true,
+   "uri": "https://letterboxd.com/lordwoogie/film/barbie/1/",
+   "tmdbId": "346698"
+  },
+  {
+   "title": "Withnail & I",
+   "year": 1987,
+   "rating": 4.0,
+   "watched": "2026-08-28",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/withnail-i/",
+   "tmdbId": "13446"
+  },
+  {
+   "title": "The Invite",
+   "year": 2026,
+   "rating": 4.5,
+   "watched": "2026-08-11",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/the-invite-2026/",
+   "tmdbId": "950028"
+  },
+  {
+   "title": "Puss in Boots: The Last Wish",
+   "year": 2022,
+   "rating": 4.0,
+   "watched": "2026-08-07",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/puss-in-boots-the-last-wish/",
+   "tmdbId": "315162"
+  },
+  {
+   "title": "Avatar Aang: The Last Airbender",
+   "year": 2026,
+   "rating": 4.0,
+   "watched": "2026-07-30",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/avatar-aang-the-last-airbender/",
+   "tmdbId": "980431"
+  },
+  {
+   "title": "Troy",
+   "year": 2004,
+   "rating": 3.0,
+   "watched": "2026-07-27",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/troy/",
+   "tmdbId": "652"
+  },
+  {
+   "title": "The Odyssey",
+   "year": 2026,
+   "rating": 4.5,
+   "watched": "2026-07-24",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/the-odyssey-2026/",
+   "tmdbId": "1368337"
+  },
+  {
+   "title": "Backrooms",
+   "year": 2026,
+   "rating": 3.5,
+   "watched": "2026-07-19",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/backrooms-2026/",
+   "tmdbId": "1083381"
+  },
+  {
+   "title": "Moana",
+   "year": 2026,
+   "rating": 3.5,
+   "watched": "2026-07-12",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/moana/",
+   "tmdbId": "1108427"
+  },
+  {
+   "title": "Minions & Monsters",
+   "year": 2026,
+   "rating": 3.5,
+   "watched": "2026-07-05",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/minions-monsters-2026/",
+   "tmdbId": "1315772"
+  },
+  {
+   "title": "Obsession",
+   "year": 2025,
+   "rating": 4.0,
+   "watched": "2026-07-02",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/obsession-2025/",
+   "tmdbId": "1339713"
+  },
+  {
+   "title": "Toy Story",
+   "year": 1995,
+   "rating": 3.5,
+   "watched": "2026-06-22",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/toy-story/",
+   "tmdbId": "862"
+  },
+  {
+   "title": "Frances Ha",
+   "year": 2012,
+   "rating": 4.5,
+   "watched": "2026-04-25",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/frances-ha/",
+   "tmdbId": "121986"
+  },
+  {
+   "title": "Scream",
+   "year": 2022,
+   "rating": 3.5,
+   "watched": "2026-04-24",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/scream-2022/",
+   "tmdbId": "646385"
+  },
+  {
+   "title": "Daisies",
+   "year": 1966,
+   "rating": 3.5,
+   "watched": "2026-04-23",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/daisies/",
+   "tmdbId": "46919"
+  },
+  {
+   "title": "28 Years Later: The Bone Temple",
+   "year": 2026,
+   "rating": 3.5,
+   "watched": "2026-04-21",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/28-years-later-the-bone-temple/",
+   "tmdbId": "1272837"
+  },
+  {
+   "title": "Predator: Badlands",
+   "year": 2025,
+   "rating": 4.0,
+   "watched": "2026-04-19",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/predator-badlands/",
+   "tmdbId": "1242898"
+  },
+  {
+   "title": "Oh, Hi!",
+   "year": 2025,
+   "rating": 3.5,
+   "watched": "2026-04-13",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/oh-hi/",
+   "tmdbId": "1339658"
+  },
+  {
+   "title": "Nuremberg",
+   "year": 2025,
+   "rating": 3.5,
+   "watched": "2026-04-05",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/nuremberg-2025/",
+   "tmdbId": "1214931"
+  },
+  {
+   "title": "Nirvanna the Band the Show the Movie",
+   "year": 2025,
+   "rating": 4.0,
+   "watched": "2026-03-26",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/nirvanna-the-band-the-show-the-movie/",
+   "tmdbId": "1154538"
+  },
+  {
+   "title": "Jimmy Savile: A British Horror Story",
+   "year": 2022,
+   "rating": null,
+   "watched": "2026-03-18",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/jimmy-savile-a-british-horror-story-2022/",
+   "tmdbId": null
+  },
+  {
+   "title": "Project Hail Mary",
+   "year": 2026,
+   "rating": 4.5,
+   "watched": "2026-03-20",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/project-hail-mary/",
+   "tmdbId": "687163"
+  },
+  {
+   "title": "Sentimental Value",
+   "year": 2025,
+   "rating": 3.5,
+   "watched": "2026-03-02",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/sentimental-value-2025/",
+   "tmdbId": "1124566"
+  },
+  {
+   "title": "Marty Supreme",
+   "year": 2025,
+   "rating": 4.0,
+   "watched": "2026-02-25",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/marty-supreme/",
+   "tmdbId": "1317288"
+  },
+  {
+   "title": "Train Dreams",
+   "year": 2025,
+   "rating": 4.5,
+   "watched": "2026-02-20",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/train-dreams/",
+   "tmdbId": "1241983"
+  },
+  {
+   "title": "Frankenstein",
+   "year": 2025,
+   "rating": 4.5,
+   "watched": "2026-01-23",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/frankenstein-2025/",
+   "tmdbId": "1062722"
+  },
+  {
+   "title": "The Perfect Neighbor",
+   "year": 2025,
+   "rating": 3.5,
+   "watched": "2026-01-22",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/the-perfect-neighbour/",
+   "tmdbId": "1400782"
+  },
+  {
+   "title": "28 Years Later",
+   "year": 2025,
+   "rating": 3.5,
+   "watched": "2026-01-20",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/28-years-later/",
+   "tmdbId": "1100988"
+  },
+  {
+   "title": "The Fantastic 4: First Steps",
+   "year": 2025,
+   "rating": 3.5,
+   "watched": "2025-12-21",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/the-fantastic-4-first-steps/",
+   "tmdbId": "617126"
+  },
+  {
+   "title": "Jurassic World Rebirth",
+   "year": 2025,
+   "rating": 3.0,
+   "watched": "2025-12-07",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/jurassic-world-rebirth/",
+   "tmdbId": "1234821"
+  },
+  {
+   "title": "Drag Me to Hell",
+   "year": 2009,
+   "rating": 3.0,
+   "watched": "2025-10-31",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/drag-me-to-hell/",
+   "tmdbId": "16871"
+  },
+  {
+   "title": "V/H/S/Halloween",
+   "year": 2025,
+   "rating": 3.5,
+   "watched": "2025-10-24",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/v-h-s-halloween/",
+   "tmdbId": "1373445"
+  },
+  {
+   "title": "Peeping Tom",
+   "year": 1960,
+   "rating": 4.0,
+   "watched": "2025-10-25",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/peeping-tom/",
+   "tmdbId": "11167"
+  },
+  {
+   "title": "One Battle After Another",
+   "year": 2025,
+   "rating": 4.5,
+   "watched": "2025-09-28",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/one-battle-after-another/",
+   "tmdbId": "1054867"
+  },
+  {
+   "title": "Mission: Impossible – The Final Reckoning",
+   "year": 2025,
+   "rating": 3.5,
+   "watched": "2025-09-24",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/mission-impossible-the-final-reckoning/",
+   "tmdbId": "575265"
+  },
+  {
+   "title": "Broadcast News",
+   "year": 1987,
+   "rating": 4.5,
+   "watched": "2025-09-02",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/broadcast-news/",
+   "tmdbId": "12626"
+  },
+  {
+   "title": "Weapons",
+   "year": 2025,
+   "rating": 4.5,
+   "watched": "2025-08-17",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/weapons-2025/",
+   "tmdbId": "1078605"
+  },
+  {
+   "title": "Mulholland Drive",
+   "year": 2001,
+   "rating": 4.0,
+   "watched": "2025-07-31",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/mulholland-drive/",
+   "tmdbId": "1018"
+  },
+  {
+   "title": "Superman",
+   "year": 2025,
+   "rating": 4.0,
+   "watched": "2025-07-24",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/superman-2025/",
+   "tmdbId": "1061474"
+  },
+  {
+   "title": "V for Vendetta",
+   "year": 2005,
+   "rating": 4.0,
+   "watched": "2025-07-18",
+   "rewatch": true,
+   "uri": "https://letterboxd.com/lordwoogie/film/v-for-vendetta/1/",
+   "tmdbId": "752"
+  },
+  {
+   "title": "Casablanca",
+   "year": 1942,
+   "rating": 4.5,
+   "watched": "2025-07-08",
+   "rewatch": true,
+   "uri": "https://letterboxd.com/lordwoogie/film/casablanca/",
+   "tmdbId": "289"
+  },
+  {
+   "title": "Clown in a Cornfield",
+   "year": 2025,
+   "rating": 2.5,
+   "watched": "2025-07-07",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/clown-in-a-cornfield/",
+   "tmdbId": "713364"
+  },
+  {
+   "title": "67 Bombs to Enid",
+   "year": 2025,
+   "rating": 5.0,
+   "watched": "2025-06-12",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/67-bombs-to-enid/",
+   "tmdbId": "1496102"
+  }
+ ]
+}
