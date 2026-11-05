@@ -202,6 +202,58 @@
   .hint { color: var(--muted); font-size: 13px; line-height: 1.55; margin-bottom: 14px; }
   .hint b { color: var(--gold); }
 
+  /* ---------- For You ---------- */
+  .fy-btn .emoji { filter: drop-shadow(0 0 6px rgba(249,214,22,.6)); }
+  .fy-controls { gap: 8px; }
+  .fy-svcs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .fy-chip {
+    padding: 6px 11px; font-size: 12px; border-radius: 20px; color: var(--muted);
+    background: transparent; text-decoration: line-through;
+  }
+  .fy-chip.on { color: var(--blue-ink); background: var(--gold); border-color: var(--gold); text-decoration: none; }
+  .fy-section { padding: 6px 18px 18px; }
+  .fy-section h3 {
+    font-family: 'Anton', sans-serif; font-weight: 400; font-size: 17px; letter-spacing: 2.5px;
+    text-transform: uppercase; color: var(--gold); transform: skewX(-6deg); margin: 12px 0 12px;
+  }
+  .fy-section.kids {
+    background: linear-gradient(180deg, rgba(249,214,22,.09), transparent);
+    border-bottom: 1px solid var(--line);
+  }
+  .fy-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 12px; }
+  .fy-card {
+    display: flex; gap: 12px; background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 12px; padding: 10px; min-width: 0;
+  }
+  .fy-poster { width: 78px; height: 117px; flex: none; border-radius: 7px; object-fit: cover; background: rgba(2,14,60,.6); }
+  .fy-noposter { display: grid; place-items: center; font-size: 24px; }
+  .fy-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .fy-title { font-weight: 700; font-size: 14.5px; overflow-wrap: anywhere; }
+  .fy-title .yr { color: var(--muted); font-weight: 400; font-size: 12px; font-family: 'JetBrains Mono', monospace; margin-left: 4px; }
+  .fy-new {
+    margin-left: 7px; font-size: 9.5px; font-weight: 700; letter-spacing: 1px; padding: 1px 6px;
+    border-radius: 4px; background: var(--gold); color: var(--blue-ink); vertical-align: 2px;
+  }
+  .fy-tag {
+    margin-left: 6px; font-size: 10px; font-family: 'JetBrains Mono', monospace; font-weight: 600;
+    padding: 1px 7px; border-radius: 20px; vertical-align: 2px; border: 1px solid;
+  }
+  .fy-tag.now { color: #ff8ac2; border-color: rgba(255,138,194,.6); }
+  .fy-tag.later { color: var(--muted); border-color: var(--line); }
+  .fy-meta { color: var(--muted); font-size: 11.5px; font-family: 'JetBrains Mono', monospace; overflow-wrap: anywhere; }
+  .fy-reason { font-size: 13px; line-height: 1.45; }
+  .fy-foot { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-top: auto; padding-top: 4px; }
+  .fy-svc {
+    font-size: 10.5px; padding: 2px 7px; border-radius: 5px; background: rgba(2,14,60,.55);
+    color: var(--text); border: 1px solid var(--line);
+  }
+  .fy-actions { margin-left: auto; display: flex; gap: 5px; align-items: center; }
+  .fy-add { width: auto; padding: 5px 8px; font-size: 12px; border-radius: 8px; max-width: 150px; }
+  .fy-in { font-size: 11.5px; color: var(--green); }
+  .fy-hide { padding: 4px 8px; font-size: 11px; background: transparent; color: var(--muted); }
+  .fy-restore { padding: 4px 18px 18px; }
+  .fy-restore button { font-size: 12px; background: transparent; color: var(--muted); }
+
   .sync-banner {
     padding: 13px 18px; border-bottom: 1px solid var(--line); background: var(--panel-2);
     color: var(--muted); font-size: 13px;
@@ -378,6 +430,8 @@
     .item .stars { min-width: 0; }
     .controls input[type=text] { max-width: none; flex: 1; }
     .seg { max-width: 100%; overflow-x: auto; }
+    .fy-grid { grid-template-columns: 1fr; }
+    .fy-section { padding: 4px 12px 14px; }
     #collapseBtn { display: none; }
     .wrap.collapsed { grid-template-columns: 1fr; }
     .wrap.collapsed .list-btn .name, .wrap.collapsed .list-btn .count,
@@ -1034,7 +1088,12 @@ function starsText(r) {
    ============================================================ */
 function renderNav() {
   const nav = document.getElementById('listNav');
-  nav.innerHTML = state.lists.map(function (l) {
+  const fyCount = picksData ? visiblePicks().filter(function (p) { return p.week === picksData.week; }).length : 0;
+  nav.innerHTML =
+    '<button class="list-btn fy-btn' + (state.activeId === FORYOU ? ' active' : '') + '" data-id="' + FORYOU + '">' +
+      '<span class="emoji">✨</span><span class="name">For You</span>' +
+      (fyCount ? '<span class="count">' + fyCount + '</span>' : '') + '</button>' +
+    state.lists.map(function (l) {
     return '<button class="list-btn' + (l.id === state.activeId ? ' active' : '') + '" data-id="' + l.id + '">' +
       '<span class="emoji">' + esc(l.emoji) + '</span>' +
       '<span class="name">' + esc(l.name) + '</span>' +
@@ -1090,6 +1149,7 @@ function visibleItems(list) {
 }
 
 function renderPanel() {
+  if (state.activeId === FORYOU) { renderForYou(); return; }
   const list = activeList();
   state.activeId = list.id;
   const panel = document.getElementById('panel');
@@ -2014,6 +2074,197 @@ function applyLetterboxd(data) {
   return { isNew: isNew, total: entries.length, fresh: isNew ? entries.length : fresh, rated: rated, ticked: ticked };
 }
 
+/* ============================================================
+   For You: weekly picks from suggestions.json
+   (written each Friday by .github/workflows/suggest.yml)
+   ============================================================ */
+const FORYOU = '__foryou';
+let picksData = null;
+const fyView = { genre: '', era: '', runtime: '' };
+
+function loadPicks() {
+  if (!window.fetch) return;
+  fetch('suggestions.json', { cache: 'no-cache' })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (data) {
+      if (!data || !Array.isArray(data.picks)) return;
+      picksData = data;
+      renderNav();
+      if (state.activeId === FORYOU) renderPanel();
+    })
+    .catch(function () { /* no picks yet */ });
+}
+
+function visiblePicks() {
+  const hidden = ui.fyHidden || [];
+  return (picksData ? picksData.picks : []).filter(function (p) { return hidden.indexOf(p.tmdbId) < 0; });
+}
+
+// Where a film already lives in the app, keyed by title and year.
+function listIndex() {
+  const idx = {};
+  state.lists.forEach(function (l) {
+    l.items.forEach(function (it) {
+      idx[normTitle(it.title) + '|' + (it.year || '')] = l.name;
+      if (!idx[normTitle(it.title) + '|']) idx[normTitle(it.title) + '|'] = l.name;
+    });
+  });
+  return idx;
+}
+
+function pickMatchesFilters(p) {
+  const off = ui.fyOff || [];
+  if (p.services && p.services.length && p.services.every(function (sv) { return off.indexOf(sv) >= 0; })) return false;
+  if (fyView.genre && (p.genres || []).indexOf(fyView.genre) < 0) return false;
+  if (fyView.era && (!p.year || String(Math.floor(p.year / 10) * 10) !== fyView.era)) return false;
+  if (fyView.runtime && p.runtime && p.runtime > parseInt(fyView.runtime, 10)) return false;
+  return true;
+}
+
+function pickCard(p, inList) {
+  const isNew = picksData && p.week === picksData.week;
+  const meta = [p.runtime ? p.runtime + ' min' : '', p.cert || '', (p.directors || []).join(', ')]
+    .filter(Boolean).join(' · ');
+  const tag = p.section === 'kids'
+    ? '<span class="fy-tag ' + (p.audience === 'norah_now' ? 'now' : 'later') + '">' +
+      (p.audience === 'norah_now' ? 'Norah now' : 'Ages ' + esc(p.bracket) + ' later') + '</span>'
+    : '';
+  const lists = state.lists.filter(function (l) { return !l.synced; });
+  return '<div class="fy-card" data-tmdb="' + p.tmdbId + '">' +
+    (p.poster
+      ? '<img class="fy-poster" src="https://image.tmdb.org/t/p/w185' + esc(p.poster) + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">'
+      : '<div class="fy-poster fy-noposter">🎬</div>') +
+    '<div class="fy-body">' +
+      '<div class="fy-title">' + esc(p.title) + (p.year ? ' <span class="yr">' + p.year + '</span>' : '') +
+        (isNew ? '<span class="fy-new">NEW</span>' : '') + tag + '</div>' +
+      (meta ? '<div class="fy-meta">' + esc(meta) + '</div>' : '') +
+      '<div class="fy-reason">' + esc(p.reason) + '</div>' +
+      '<div class="fy-foot">' +
+        (p.services || []).map(function (sv) { return '<span class="fy-svc">' + esc(sv) + '</span>'; }).join('') +
+        '<span class="fy-actions">' +
+          (inList
+            ? '<span class="fy-in">✓ In ' + esc(inList) + '</span>'
+            : '<select class="fy-add" title="Add to a list"><option value="">＋ Add to…</option>' +
+              lists.map(function (l) {
+                return '<option value="' + l.id + '">' + esc(l.emoji + ' ' + l.name) + '</option>';
+              }).join('') + '</select>') +
+          '<button class="fy-hide" title="Hide this pick">✕</button>' +
+        '</span>' +
+      '</div>' +
+    '</div></div>';
+}
+
+function renderForYou() {
+  const panel = document.getElementById('panel');
+  if (!picksData) {
+    panel.innerHTML =
+      '<div class="list-header"><div class="list-title-row"><h2><span>✨</span> For You</h2></div></div>' +
+      '<div class="empty-state"><div class="big">✨</div>' +
+      'Your first weekly picks arrive after the Friday run.<br>' +
+      'It needs the <b>TMDB_TOKEN</b> and <b>ANTHROPIC_API_KEY</b> secrets on the GitHub repo.</div>';
+    return;
+  }
+  const all = visiblePicks();
+  const shown = all.filter(pickMatchesFilters);
+  const idx = listIndex();
+  const genres = {}, eras = {};
+  all.forEach(function (p) {
+    (p.genres || []).forEach(function (g) { genres[g] = 1; });
+    if (p.year) eras[Math.floor(p.year / 10) * 10] = 1;
+  });
+  const off = ui.fyOff || [];
+  const hiddenCount = (ui.fyHidden || []).length;
+
+  function sectionHTML(title, cls, picks) {
+    if (!picks.length) return '';
+    picks.sort(function (a, b) { return (b.week || '').localeCompare(a.week || ''); });
+    return '<section class="fy-section ' + cls + '"><h3>' + title + '</h3><div class="fy-grid">' +
+      picks.map(function (p) {
+        return pickCard(p, idx[normTitle(p.title) + '|' + (p.year || '')] || idx[normTitle(p.title) + '|']);
+      }).join('') + '</div></section>';
+  }
+  const of = function (section, audience) {
+    return shown.filter(function (p) { return p.section === section && (!audience || p.audience === audience); });
+  };
+  const body =
+    sectionHTML('For Norah', 'kids', of('kids', 'norah_now')) +
+    sectionHTML('Family films for later', 'kids', of('kids', 'family_later')) +
+    sectionHTML('New for you', '', of('forYou')) +
+    sectionHTML('From the archives, streaming now', '', of('archive'));
+
+  panel.innerHTML =
+    '<div class="list-header">' +
+      '<div class="list-title-row"><h2><span>✨</span> For You</h2></div>' +
+      '<div class="list-meta">Week of <b>' + fmtDate(picksData.week) + '</b>' +
+        (picksData.weekNote ? ' &nbsp;·&nbsp; ' + esc(picksData.weekNote) : '') + '</div>' +
+    '</div>' +
+    '<div class="controls fy-controls">' +
+      '<div class="fy-svcs">' + (picksData.services || []).map(function (sv) {
+        return '<button class="fy-chip' + (off.indexOf(sv) < 0 ? ' on' : '') + '" data-svc="' + esc(sv) + '">' + esc(sv) + '</button>';
+      }).join('') + '</div>' +
+      '<select id="fyGenre"><option value="">All genres</option>' + Object.keys(genres).sort().map(function (g) {
+        return '<option' + (fyView.genre === g ? ' selected' : '') + '>' + esc(g) + '</option>';
+      }).join('') + '</select>' +
+      '<select id="fyEra"><option value="">Any era</option>' + Object.keys(eras).sort().map(function (e) {
+        return '<option value="' + e + '"' + (fyView.era === e ? ' selected' : '') + '>' + e + 's</option>';
+      }).join('') + '</select>' +
+      '<select id="fyRuntime">' + [['', 'Any length'], ['90', 'Under 90 min'], ['100', 'Under 100 min'], ['120', 'Under 2 hours']]
+        .map(function (o) { return '<option value="' + o[0] + '"' + (fyView.runtime === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; })
+        .join('') + '</select>' +
+    '</div>' +
+    (body || '<div class="empty-state"><div class="big">✨</div>Nothing matches those filters.</div>') +
+    (hiddenCount ? '<div class="fy-restore"><button id="fyRestore">Show ' + hiddenCount + ' hidden pick' + (hiddenCount === 1 ? '' : 's') + '</button></div>' : '');
+
+  panel.querySelectorAll('.fy-chip').forEach(function (b) {
+    b.addEventListener('click', function () {
+      const list = ui.fyOff || [];
+      const i = list.indexOf(b.dataset.svc);
+      if (i >= 0) list.splice(i, 1); else list.push(b.dataset.svc);
+      ui.fyOff = list; saveUI(); renderForYou();
+    });
+  });
+  [['fyGenre', 'genre'], ['fyEra', 'era'], ['fyRuntime', 'runtime']].forEach(function (pair) {
+    document.getElementById(pair[0]).addEventListener('change', function (ev) {
+      fyView[pair[1]] = ev.target.value; renderForYou();
+    });
+  });
+  const restore = document.getElementById('fyRestore');
+  if (restore) restore.addEventListener('click', function () {
+    ui.fyHidden = []; saveUI(); render();
+  });
+  panel.querySelectorAll('.fy-card').forEach(function (card) {
+    const p = picksData.picks.filter(function (x) { return String(x.tmdbId) === card.dataset.tmdb; })[0];
+    card.querySelector('.fy-hide').addEventListener('click', function () {
+      ui.fyHidden = (ui.fyHidden || []).concat([p.tmdbId]); saveUI();
+      renderNav(); renderForYou();
+      toast('Hid “' + p.title + '”');
+    });
+    const add = card.querySelector('.fy-add');
+    if (add) add.addEventListener('change', function () {
+      const list = state.lists.filter(function (l) { return l.id === add.value; })[0];
+      if (!list) return;
+      addPickToList(list, p);
+      renderForYou();
+    });
+  });
+}
+
+function addPickToList(list, p) {
+  const notes = [(p.directors || []).join(', '), p.tmdbScore ? 'TMDB ' + p.tmdbScore : ''].filter(Boolean).join(' · ');
+  const item = {
+    id: uid(), title: p.title, year: p.year || null, rating: null, notes: notes,
+    watched: false, tmdbId: p.tmdbId, poster: p.poster || null, added: Date.now()
+  };
+  if (list.brackets) {
+    // Picks for a toddler sit in the youngest column the list has.
+    item.bracket = list.brackets.indexOf(p.bracket) >= 0 ? p.bracket : list.brackets[0];
+  }
+  list.items.push(item);
+  save();
+  renderNav();
+  toast('Added “' + p.title + '” to ' + list.name + (item.bracket ? ' (ages ' + item.bracket + ')' : ''));
+}
+
 function syncLetterboxd() {
   if (!window.fetch) return;
   fetch('letterboxd.json', { cache: 'no-cache' })
@@ -2052,6 +2303,7 @@ applyCollapse();
 
 render();
 syncLetterboxd();
+loadPicks();
 </script>
 </body>
 </html>
