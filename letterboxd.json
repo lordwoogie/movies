@@ -1,7 +1,16 @@
 {
- "updated": "2026-11-05T17:11:47Z",
+ "updated": "2026-11-06T19:38:34Z",
  "count": 50,
  "entries": [
+  {
+   "title": "Godzilla Minus Zero",
+   "year": 2026,
+   "rating": 3.5,
+   "watched": "2026-11-05",
+   "rewatch": false,
+   "uri": "https://letterboxd.com/lordwoogie/film/godzilla-minus-zero/",
+   "tmdbId": "1381071"
+  },
   {
    "title": "Buddy",
    "year": 2026,
@@ -442,15 +451,6 @@
    "rewatch": false,
    "uri": "https://letterboxd.com/lordwoogie/film/clown-in-a-cornfield/",
    "tmdbId": "713364"
-  },
-  {
-   "title": "67 Bombs to Enid",
-   "year": 2025,
-   "rating": 5.0,
-   "watched": "2025-06-12",
-   "rewatch": false,
-   "uri": "https://letterboxd.com/lordwoogie/film/67-bombs-to-enid/",
-   "tmdbId": "1496102"
   }
  ]
 }
